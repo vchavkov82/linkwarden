@@ -5,3 +5,4 @@ export * from "./isArchivalTag";
 export * from "./generatePreview";
 export * from "./utils";
 export * from "./withRetry";
+export * from "./normalizeUrl";

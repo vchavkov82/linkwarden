@@ -3,6 +3,7 @@ import { hasPassedLimit } from "./verifyCapacity";
 import Parser from "rss-parser";
 import { prisma } from "@linkwarden/prisma";
 import { withRetry } from "./withRetry";
+import { normalizeUrl, getUrlVariants } from "./normalizeUrl";
 
 export const rssHandler = async (
   rssSubscription: RssSubscription,
@@ -51,15 +52,43 @@ export const rssHandler = async (
         return;
       }
 
+      const user = await prisma.user.findUnique({
+        where: { id: rssSubscription.ownerId },
+        select: { preventDuplicateLinks: true },
+      });
+
+      const checkDuplicates = user?.preventDuplicateLinks ?? false;
+
       await withRetry(
         async () => {
           await prisma.$transaction(
             async (tx) => {
               for (const item of newItems) {
+                const normalized = normalizeUrl(item.link);
+
+                if (checkDuplicates && normalized) {
+                  const variants = getUrlVariants(normalized);
+                  const existing = await tx.link.findFirst({
+                    where: {
+                      OR: variants.map((v) => ({ url: v })),
+                      collection: { ownerId: rssSubscription.ownerId },
+                    },
+                    select: { id: true },
+                  });
+
+                  if (existing) {
+                    console.log(
+                      "\x1b[33m%s\x1b[0m",
+                      `Skipping duplicate RSS item: ${item.link}`
+                    );
+                    continue;
+                  }
+                }
+
                 await tx.link.create({
                   data: {
                     name: item.title,
-                    url: item.link,
+                    url: normalized,
                     type: "url",
                     createdBy: {
                       connect: {

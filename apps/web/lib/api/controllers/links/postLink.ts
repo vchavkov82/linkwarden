@@ -6,7 +6,12 @@ import {
   PostLinkSchema,
   PostLinkSchemaType,
 } from "@linkwarden/lib/schemaValidation";
-import { hasPassedLimit, withRetry } from "@linkwarden/lib";
+import {
+  hasPassedLimit,
+  withRetry,
+  normalizeUrl,
+  getUrlVariants,
+} from "@linkwarden/lib";
 
 export default async function postLink(
   body: PostLinkSchemaType,
@@ -72,23 +77,17 @@ export default async function postLink(
 
   const checkDuplicates = user?.preventDuplicateLinks && link.url;
 
-  const normalizedUrl = link.url?.trim().replace(/\/+$/, "");
-  const hasWwwPrefix = normalizedUrl?.includes(`://www.`);
-  const urlWithoutWww = hasWwwPrefix
-    ? normalizedUrl?.replace(`://www.`, "://")
-    : normalizedUrl;
-  const urlWithWww = hasWwwPrefix
-    ? normalizedUrl
-    : normalizedUrl?.replace("://", `://www.`);
+  const normalized = normalizeUrl(link.url);
+  const urlVariants = getUrlVariants(normalized);
 
   const result = await withRetry(
     async () => {
       return await prisma.$transaction(
         async (tx) => {
-          if (checkDuplicates) {
+          if (checkDuplicates && urlVariants.length > 0) {
             const existingLink = await tx.link.findFirst({
               where: {
-                OR: [{ url: urlWithWww }, { url: urlWithoutWww }],
+                OR: urlVariants.map((variant) => ({ url: variant })),
                 collection: {
                   ownerId: userId,
                 },
@@ -102,7 +101,7 @@ export default async function postLink(
 
           const newLink = await tx.link.create({
             data: {
-              url: link.url?.trim() || null,
+              url: normalized || null,
               name,
               description: link.description,
               type: linkType,
