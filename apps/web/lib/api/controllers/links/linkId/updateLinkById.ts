@@ -7,6 +7,7 @@ import {
   UpdateLinkSchema,
   UpdateLinkSchemaType,
 } from "@linkwarden/lib/schemaValidation";
+import { withRetry } from "@linkwarden/lib";
 
 export default async function updateLinkById(
   userId: number,
@@ -143,54 +144,56 @@ export default async function updateLinkById(
         status: 401,
       };
 
-    const updatedLink = await prisma.link.update({
-      where: {
-        id: linkId,
-      },
-      data: {
-        name: data.name || "",
-        url: data.url,
-        description: data.description || "",
-        icon: data.icon,
-        iconWeight: data.iconWeight,
-        color: data.color,
-        image: oldLink?.url !== data.url ? null : undefined,
-        pdf: oldLink?.url !== data.url ? null : undefined,
-        readable: oldLink?.url !== data.url ? null : undefined,
-        monolith: oldLink?.url !== data.url ? null : undefined,
-        preview: oldLink?.url !== data.url ? null : undefined,
-        lastPreserved: oldLink?.url !== data.url ? null : undefined,
-        indexVersion: null,
-        collection: {
-          connect: {
-            id: data.collection.id,
-          },
+    const updatedLink = await withRetry(() =>
+      prisma.link.update({
+        where: {
+          id: linkId,
         },
-        tags: removePreviousTags
-          ? {
-              set: [],
-              connectOrCreate: tagConnectOrCreate,
-            }
-          : {
-              connectOrCreate: tagConnectOrCreate,
+        data: {
+          name: data.name || "",
+          url: data.url,
+          description: data.description || "",
+          icon: data.icon,
+          iconWeight: data.iconWeight,
+          color: data.color,
+          image: oldLink?.url !== data.url ? null : undefined,
+          pdf: oldLink?.url !== data.url ? null : undefined,
+          readable: oldLink?.url !== data.url ? null : undefined,
+          monolith: oldLink?.url !== data.url ? null : undefined,
+          preview: oldLink?.url !== data.url ? null : undefined,
+          lastPreserved: oldLink?.url !== data.url ? null : undefined,
+          indexVersion: null,
+          collection: {
+            connect: {
+              id: data.collection.id,
             },
-        pinnedBy: data?.pinnedBy
-          ? data.pinnedBy[0]?.id === userId
-            ? { connect: { id: userId } }
-            : { disconnect: { id: userId } }
-          : undefined,
-      },
-      include: {
-        tags: true,
-        collection: true,
-        pinnedBy: isCollectionOwner
-          ? {
-              where: { id: userId },
-              select: { id: true },
-            }
-          : undefined,
-      },
-    });
+          },
+          tags: removePreviousTags
+            ? {
+                set: [],
+                connectOrCreate: tagConnectOrCreate,
+              }
+            : {
+                connectOrCreate: tagConnectOrCreate,
+              },
+          pinnedBy: data?.pinnedBy
+            ? data.pinnedBy[0]?.id === userId
+              ? { connect: { id: userId } }
+              : { disconnect: { id: userId } }
+            : undefined,
+        },
+        include: {
+          tags: true,
+          collection: true,
+          pinnedBy: isCollectionOwner
+            ? {
+                where: { id: userId },
+                select: { id: true },
+              }
+            : undefined,
+        },
+      })
+    );
 
     if (collectionIsAccessible?.id !== data.collection.id) {
       await moveFiles(linkId, collectionIsAccessible?.id, data.collection.id);

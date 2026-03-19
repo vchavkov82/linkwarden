@@ -1,20 +1,17 @@
 import { RssSubscription } from "@linkwarden/prisma/client";
 import { hasPassedLimit } from "./verifyCapacity";
-import { prisma } from "@linkwarden/prisma";
 import Parser from "rss-parser";
-import { assertUrlIsSafeForServerSideFetch } from "./ssrf";
+import { prisma } from "@linkwarden/prisma";
 
 export const rssHandler = async (
   rssSubscription: RssSubscription,
-  feed: Parser.Output<any>
+  parser: Parser
 ) => {
   try {
-    const feedLastBuildDate = (feed as any).lastBuildDate as
-      | string
-      | Date
-      | undefined;
+    const feed = await parser.parseURL(rssSubscription.url);
+
     const feedLastPubDate =
-      feedLastBuildDate ??
+      feed.lastBuildDate ??
       feed.items.reduce((acc, item) => {
         const itemPubDate = item.pubDate ? new Date(item.pubDate) : null;
         return itemPubDate && itemPubDate > acc ? itemPubDate : acc;
@@ -53,18 +50,11 @@ export const rssHandler = async (
         return;
       }
 
-      // Create all links concurrently
-      await Promise.all(
-        newItems.map(async (item) => {
-          if (!item.link) return null;
-
-          try {
-            await assertUrlIsSafeForServerSideFetch(item.link);
-          } catch {
-            return null;
-          }
-
-          return prisma.link.create({
+      // Create all links and update lastBuildDate atomically to prevent
+      // duplicates if a crash occurs between link creation and date update
+      await prisma.$transaction(async (tx) => {
+        for (const item of newItems) {
+          await tx.link.create({
             data: {
               name: item.title,
               url: item.link,
@@ -81,13 +71,12 @@ export const rssHandler = async (
               },
             },
           });
-        })
-      );
+        }
 
-      // Update the lastBuildDate in the database
-      await prisma.rssSubscription.update({
-        where: { id: rssSubscription.id },
-        data: { lastBuildDate: new Date(feedLastPubDate) },
+        await tx.rssSubscription.update({
+          where: { id: rssSubscription.id },
+          data: { lastBuildDate: new Date(feedLastPubDate) },
+        });
       });
     }
   } catch (error) {

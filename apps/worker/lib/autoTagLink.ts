@@ -16,7 +16,7 @@ import { azure } from "@ai-sdk/azure";
 import { anthropic } from "@ai-sdk/anthropic";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createOllama } from "ollama-ai-provider-v2";
-import { titleCase } from "@linkwarden/lib/utils";
+import { titleCase, withRetry } from "@linkwarden/lib";
 
 // Function to concat /api with the base URL properly
 const ensureValidURL = (base: string, path: string) =>
@@ -66,7 +66,11 @@ const getAIModel = (): LanguageModelV2 => {
   throw new Error("No AI provider configured");
 };
 
-export default async function autoTagLink(user: User, linkId: number) {
+export default async function autoTagLink(
+  user: User,
+  linkId: number,
+  metaDescription: string | undefined
+) {
   const link = await prisma.link.findUnique({
     where: { id: linkId },
   });
@@ -74,7 +78,7 @@ export default async function autoTagLink(user: User, linkId: number) {
   if (!link) return console.log("Link not found for auto tagging.");
 
   const description =
-    (link.metaDescription ? link.metaDescription + "..." : undefined) ||
+    metaDescription ||
     (link.textContent ? link.textContent?.slice(0, 500) + "..." : undefined);
 
   if (!description) return;
@@ -128,10 +132,7 @@ export default async function autoTagLink(user: User, linkId: number) {
   });
 
   try {
-    // If text has an array inside a "```json ```" block, extract that
-    let tags: string[] = JSON.parse(
-      text.match(/```json\s*([\s\S]*?)\s*```/i)?.[1] ?? text
-    );
+    let tags: string[] = JSON.parse(text);
 
     if (!tags || tags.length === 0) {
       return;
@@ -151,31 +152,33 @@ export default async function autoTagLink(user: User, linkId: number) {
       tags = tags.slice(0, 5);
     }
 
-    await prisma.link.update({
-      where: { id: linkId },
-      data: {
-        tags: {
-          connectOrCreate: tags.map((tag: string) => ({
-            where: {
-              name_ownerId: {
-                name: tag.trim().slice(0, 50),
-                ownerId: user.id,
-              },
-            },
-            create: {
-              name: tag.trim().slice(0, 50),
-              owner: {
-                connect: {
-                  id: user.id,
+    await withRetry(() =>
+      prisma.link.update({
+        where: { id: linkId },
+        data: {
+          tags: {
+            connectOrCreate: tags.map((tag: string) => ({
+              where: {
+                name_ownerId: {
+                  name: tag.trim().slice(0, 50),
+                  ownerId: user.id,
                 },
               },
-              aiGenerated: true,
-            },
-          })),
+              create: {
+                name: tag.trim().slice(0, 50),
+                owner: {
+                  connect: {
+                    id: user.id,
+                  },
+                },
+                aiGenerated: true,
+              },
+            })),
+          },
+          aiTagged: true,
         },
-        aiTagged: true,
-      },
-    });
+      })
+    );
   } catch (err) {
     console.log("Error auto tagging link: ", link.url);
     console.log("Error: ", err);

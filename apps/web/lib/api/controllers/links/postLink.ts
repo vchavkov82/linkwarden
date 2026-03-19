@@ -6,8 +6,7 @@ import {
   PostLinkSchema,
   PostLinkSchemaType,
 } from "@linkwarden/lib/schemaValidation";
-import { hasPassedLimit } from "@linkwarden/lib/verifyCapacity";
-import { isUrlSafeForServerSideFetch } from "@linkwarden/lib/ssrf";
+import { hasPassedLimit, withRetry } from "@linkwarden/lib";
 
 export default async function postLink(
   body: PostLinkSchemaType,
@@ -25,9 +24,6 @@ export default async function postLink(
   }
 
   const link = dataValidation.data;
-  const shouldPreserveUrl = link.url
-    ? await isUrlSafeForServerSideFetch(link.url)
-    : false;
 
   const linkCollection = await setCollection({
     userId,
@@ -50,16 +46,31 @@ export default async function postLink(
     const urlWithoutWww = hasWwwPrefix ? url?.replace(`://www.`, "://") : url;
     const urlWithWww = hasWwwPrefix ? url : url?.replace("://", `://www.`);
 
-    const existingLink = await prisma.link.findFirst({
-      where: {
-        OR: [{ url: urlWithWww }, { url: urlWithoutWww }],
-        collection: {
-          ownerId: userId,
-        },
-      },
-    });
+    // Use a serializable transaction to make the duplicate check + create atomic
+    const duplicateCheckResult = await withRetry(
+      async () => {
+        return await prisma.$transaction(
+          async (tx) => {
+            const existingLink = await tx.link.findFirst({
+              where: {
+                OR: [{ url: urlWithWww }, { url: urlWithoutWww }],
+                collection: {
+                  ownerId: userId,
+                },
+              },
+            });
 
-    if (existingLink)
+            if (existingLink) return { duplicate: true as const };
+            return { duplicate: false as const };
+          },
+          { isolationLevel: "Serializable" }
+        );
+      },
+      3,
+      ["P2034"]
+    );
+
+    if (duplicateCheckResult.duplicate)
       return {
         response: "Link already exists",
         status: 409,
@@ -75,17 +86,12 @@ export default async function postLink(
     };
   }
 
-  const { title = "", headers = new Headers() } =
-    link.url && shouldPreserveUrl ? await fetchTitleAndHeaders(link.url) : {};
+  const { title = "", headers = new Headers() } = link.url
+    ? await fetchTitleAndHeaders(link.url)
+    : {};
 
   const name =
-    link.name && link.name !== ""
-      ? link.name
-      : link.url
-        ? shouldPreserveUrl && title
-          ? title
-          : link.url
-        : "";
+    link.name && link.name !== "" ? link.name : link.url ? title : "";
 
   const contentType = headers?.get("content-type");
   let linkType = "url";
@@ -101,54 +107,45 @@ export default async function postLink(
 
   if (!link.tags) link.tags = [];
 
-  const newLink = await prisma.link.create({
-    data: {
-      url: link.url?.trim() || null,
-      name,
-      description: link.description,
-      type: linkType,
-      createdBy: {
-        connect: {
-          id: userId,
-        },
-      },
-      collection: {
-        connect: {
-          id: linkCollection.id,
-        },
-      },
-      tags: {
-        connectOrCreate: link.tags?.map((tag) => ({
-          where: {
-            name_ownerId: {
-              name: tag.name.trim(),
-              ownerId: linkCollection.ownerId,
-            },
+  const newLink = await withRetry(() =>
+    prisma.link.create({
+      data: {
+        url: link.url?.trim() || null,
+        name,
+        description: link.description,
+        type: linkType,
+        createdBy: {
+          connect: {
+            id: userId,
           },
-          create: {
-            name: tag.name.trim(),
-            owner: {
-              connect: {
-                id: linkCollection.ownerId,
+        },
+        collection: {
+          connect: {
+            id: linkCollection.id,
+          },
+        },
+        tags: {
+          connectOrCreate: link.tags?.map((tag) => ({
+            where: {
+              name_ownerId: {
+                name: tag.name.trim(),
+                ownerId: linkCollection.ownerId,
               },
             },
-          },
-        })),
+            create: {
+              name: tag.name.trim(),
+              owner: {
+                connect: {
+                  id: linkCollection.ownerId,
+                },
+              },
+            },
+          })),
+        },
       },
-      ...(!shouldPreserveUrl && link.url
-        ? {
-            lastPreserved: new Date().toISOString(),
-            readable: "unavailable",
-            image: "unavailable",
-            monolith: "unavailable",
-            pdf: "unavailable",
-            preview: "unavailable",
-            indexVersion: null,
-          }
-        : {}),
-    },
-    include: { tags: true, collection: true },
-  });
+      include: { tags: true, collection: true },
+    })
+  );
 
   await prisma.link.update({
     where: { id: newLink.id },

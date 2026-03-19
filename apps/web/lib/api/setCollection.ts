@@ -55,25 +55,36 @@ const setCollection = async ({
     }
 
     // Create a new collection with the given name
-    const newCollection = await prisma.collection.create({
-      data: {
-        name: collectionName.trim(),
-        ownerId: userId,
-        createdById: userId,
-      },
-    });
-
-    // Update the user's collection order
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        collectionOrder: {
-          push: newCollection.id,
+    try {
+      const newCollection = await prisma.collection.create({
+        data: {
+          name: collectionName.trim(),
+          ownerId: userId,
+          createdById: userId,
         },
-      },
-    });
+      });
 
-    return newCollection;
+      // Update the user's collection order
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          collectionOrder: {
+            push: newCollection.id,
+          },
+        },
+      });
+
+      return newCollection;
+    } catch (error: any) {
+      if (error?.code === "P2002") {
+        // Another request created it first — just find and return it
+        const existing = await prisma.collection.findFirst({
+          where: { name: collectionName.trim(), ownerId: userId, parentId: null },
+        });
+        if (existing) return existing;
+      }
+      throw error;
+    }
   }
 
   // Default behavior for "Unorganized" collection if neither collectionId nor collectionName is provided
@@ -89,14 +100,36 @@ const setCollection = async ({
     return firstTopLevelUnorganizedCollection;
   }
 
-  return await prisma.collection.create({
-    data: {
-      name: "Unorganized",
-      ownerId: userId,
-      parentId: null,
-      createdById: userId,
-    },
-  });
+  try {
+    const newCollection = await prisma.collection.create({
+      data: {
+        name: "Unorganized",
+        ownerId: userId,
+        parentId: null,
+        createdById: userId,
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        collectionOrder: {
+          push: newCollection.id,
+        },
+      },
+    });
+
+    return newCollection;
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      // Another request created it first — just find and return it
+      const existing = await prisma.collection.findFirst({
+        where: { name: "Unorganized", ownerId: userId, parentId: null },
+      });
+      if (existing) return existing;
+    }
+    throw error;
+  }
 };
 
 export default setCollection;
