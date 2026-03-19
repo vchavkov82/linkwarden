@@ -40,43 +40,6 @@ export default async function postLink(
     },
   });
 
-  if (user?.preventDuplicateLinks) {
-    const url = link.url?.trim().replace(/\/+$/, ""); // trim and remove trailing slashes from the URL
-    const hasWwwPrefix = url?.includes(`://www.`);
-    const urlWithoutWww = hasWwwPrefix ? url?.replace(`://www.`, "://") : url;
-    const urlWithWww = hasWwwPrefix ? url : url?.replace("://", `://www.`);
-
-    // Use a serializable transaction to make the duplicate check + create atomic
-    const duplicateCheckResult = await withRetry(
-      async () => {
-        return await prisma.$transaction(
-          async (tx) => {
-            const existingLink = await tx.link.findFirst({
-              where: {
-                OR: [{ url: urlWithWww }, { url: urlWithoutWww }],
-                collection: {
-                  ownerId: userId,
-                },
-              },
-            });
-
-            if (existingLink) return { duplicate: true as const };
-            return { duplicate: false as const };
-          },
-          { isolationLevel: "Serializable" }
-        );
-      },
-      3,
-      ["P2034"]
-    );
-
-    if (duplicateCheckResult.duplicate)
-      return {
-        response: "Link already exists",
-        status: 409,
-      };
-  }
-
   const hasTooManyLinks = await hasPassedLimit(userId, 1);
 
   if (hasTooManyLinks) {
@@ -107,45 +70,91 @@ export default async function postLink(
 
   if (!link.tags) link.tags = [];
 
-  const newLink = await withRetry(() =>
-    prisma.link.create({
-      data: {
-        url: link.url?.trim() || null,
-        name,
-        description: link.description,
-        type: linkType,
-        createdBy: {
-          connect: {
-            id: userId,
-          },
-        },
-        collection: {
-          connect: {
-            id: linkCollection.id,
-          },
-        },
-        tags: {
-          connectOrCreate: link.tags?.map((tag) => ({
-            where: {
-              name_ownerId: {
-                name: tag.name.trim(),
-                ownerId: linkCollection.ownerId,
-              },
-            },
-            create: {
-              name: tag.name.trim(),
-              owner: {
-                connect: {
-                  id: linkCollection.ownerId,
+  const checkDuplicates = user?.preventDuplicateLinks && link.url;
+
+  const normalizedUrl = link.url?.trim().replace(/\/+$/, "");
+  const hasWwwPrefix = normalizedUrl?.includes(`://www.`);
+  const urlWithoutWww = hasWwwPrefix
+    ? normalizedUrl?.replace(`://www.`, "://")
+    : normalizedUrl;
+  const urlWithWww = hasWwwPrefix
+    ? normalizedUrl
+    : normalizedUrl?.replace("://", `://www.`);
+
+  const result = await withRetry(
+    async () => {
+      return await prisma.$transaction(
+        async (tx) => {
+          if (checkDuplicates) {
+            const existingLink = await tx.link.findFirst({
+              where: {
+                OR: [{ url: urlWithWww }, { url: urlWithoutWww }],
+                collection: {
+                  ownerId: userId,
                 },
               },
+            });
+
+            if (existingLink) {
+              return { duplicate: true as const, link: null };
+            }
+          }
+
+          const newLink = await tx.link.create({
+            data: {
+              url: link.url?.trim() || null,
+              name,
+              description: link.description,
+              type: linkType,
+              createdBy: {
+                connect: {
+                  id: userId,
+                },
+              },
+              collection: {
+                connect: {
+                  id: linkCollection.id,
+                },
+              },
+              tags: {
+                connectOrCreate: link.tags?.map((tag) => ({
+                  where: {
+                    name_ownerId: {
+                      name: tag.name.trim(),
+                      ownerId: linkCollection.ownerId,
+                    },
+                  },
+                  create: {
+                    name: tag.name.trim(),
+                    owner: {
+                      connect: {
+                        id: linkCollection.ownerId,
+                      },
+                    },
+                  },
+                })),
+              },
             },
-          })),
+            include: { tags: true, collection: true },
+          });
+
+          return { duplicate: false as const, link: newLink };
         },
-      },
-      include: { tags: true, collection: true },
-    })
+        { isolationLevel: "Serializable" }
+      );
+    },
+    5,
+    ["P2034"]
   );
+
+  if (result.duplicate) {
+    return {
+      response: "Link already exists",
+      status: 409,
+    };
+  }
+
+  const newLink = result.link!;
 
   await prisma.link.update({
     where: { id: newLink.id },

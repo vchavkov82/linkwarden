@@ -2,6 +2,7 @@ import { RssSubscription } from "@linkwarden/prisma/client";
 import { hasPassedLimit } from "./verifyCapacity";
 import Parser from "rss-parser";
 import { prisma } from "@linkwarden/prisma";
+import { withRetry } from "./withRetry";
 
 export const rssHandler = async (
   rssSubscription: RssSubscription,
@@ -50,34 +51,41 @@ export const rssHandler = async (
         return;
       }
 
-      // Create all links and update lastBuildDate atomically to prevent
-      // duplicates if a crash occurs between link creation and date update
-      await prisma.$transaction(async (tx) => {
-        for (const item of newItems) {
-          await tx.link.create({
-            data: {
-              name: item.title,
-              url: item.link,
-              type: "url",
-              createdBy: {
-                connect: {
-                  id: rssSubscription.ownerId,
-                },
-              },
-              collection: {
-                connect: {
-                  id: rssSubscription.collectionId,
-                },
-              },
-            },
-          });
-        }
+      await withRetry(
+        async () => {
+          await prisma.$transaction(
+            async (tx) => {
+              for (const item of newItems) {
+                await tx.link.create({
+                  data: {
+                    name: item.title,
+                    url: item.link,
+                    type: "url",
+                    createdBy: {
+                      connect: {
+                        id: rssSubscription.ownerId,
+                      },
+                    },
+                    collection: {
+                      connect: {
+                        id: rssSubscription.collectionId,
+                      },
+                    },
+                  },
+                });
+              }
 
-        await tx.rssSubscription.update({
-          where: { id: rssSubscription.id },
-          data: { lastBuildDate: new Date(feedLastPubDate) },
-        });
-      });
+              await tx.rssSubscription.update({
+                where: { id: rssSubscription.id },
+                data: { lastBuildDate: new Date(feedLastPubDate) },
+              });
+            },
+            { isolationLevel: "Serializable" }
+          );
+        },
+        5,
+        ["P2034"]
+      );
     }
   } catch (error) {
     console.error(

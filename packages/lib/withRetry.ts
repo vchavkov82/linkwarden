@@ -7,7 +7,12 @@ export async function withRetry<T>(
     try {
       return await fn();
     } catch (error: any) {
-      if (retryableCodes.includes(error?.code) && attempt < maxRetries) continue;
+      if (retryableCodes.includes(error?.code) && attempt < maxRetries) {
+        const jitter = Math.random() * 50;
+        const delay = Math.min(100 * Math.pow(2, attempt - 1) + jitter, 2000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
       throw error;
     }
   }
