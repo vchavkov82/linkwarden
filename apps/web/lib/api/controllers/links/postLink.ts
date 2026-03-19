@@ -6,12 +6,7 @@ import {
   PostLinkSchema,
   PostLinkSchemaType,
 } from "@linkwarden/lib/schemaValidation";
-import {
-  hasPassedLimit,
-  withRetry,
-  normalizeUrl,
-  getUrlVariants,
-} from "@linkwarden/lib";
+import { hasPassedLimit, withRetry, normalizeUrl } from "@linkwarden/lib";
 
 export default async function postLink(
   body: PostLinkSchemaType,
@@ -78,20 +73,18 @@ export default async function postLink(
   const checkDuplicates = user?.preventDuplicateLinks && link.url;
 
   const normalized = normalizeUrl(link.url);
-  const urlVariants = getUrlVariants(normalized);
 
   const result = await withRetry(
     async () => {
       return await prisma.$transaction(
         async (tx) => {
-          if (checkDuplicates && urlVariants.length > 0) {
+          if (checkDuplicates && normalized) {
             const existingLink = await tx.link.findFirst({
               where: {
-                OR: urlVariants.map((variant) => ({ url: variant })),
-                collection: {
-                  ownerId: userId,
-                },
+                url: normalized,
+                ownerId: userId,
               },
+              select: { id: true },
             });
 
             if (existingLink) {
@@ -108,6 +101,11 @@ export default async function postLink(
               createdBy: {
                 connect: {
                   id: userId,
+                },
+              },
+              owner: {
+                connect: {
+                  id: linkCollection.ownerId,
                 },
               },
               collection: {

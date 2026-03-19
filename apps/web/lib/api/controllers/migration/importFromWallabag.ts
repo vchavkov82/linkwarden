@@ -1,6 +1,6 @@
 import { prisma } from "@linkwarden/prisma";
 import { createFolder } from "@linkwarden/filesystem";
-import { hasPassedLimit } from "@linkwarden/lib/verifyCapacity";
+import { hasPassedLimit, normalizeUrl } from "@linkwarden/lib";
 
 type WallabagBackup = {
   is_archived: number;
@@ -74,18 +74,24 @@ export default async function importFromWallabag(
             }
           }
 
+          const trimmedUrl = link.url?.trim().slice(0, 2047);
           await prisma.link.create({
             data: {
               pinnedBy: link.is_starred
                 ? { connect: { id: userId } }
                 : undefined,
-              url: link.url?.trim().slice(0, 2047),
+              url: normalizeUrl(trimmedUrl) || trimmedUrl,
               name: link.title?.trim().slice(0, 254) || "",
               textContent: link.content?.trim().slice(0, 2047) || "",
               importDate: link.created_at || null,
               collection: {
                 connect: {
                   id: newCollection.id,
+                },
+              },
+              owner: {
+                connect: {
+                  id: userId,
                 },
               },
               createdBy: {

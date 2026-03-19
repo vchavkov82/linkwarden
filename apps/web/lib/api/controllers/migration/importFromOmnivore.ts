@@ -1,6 +1,6 @@
 import { prisma } from "@linkwarden/prisma";
 import { createFolder } from "@linkwarden/filesystem";
-import { hasPassedLimit } from "@linkwarden/lib/verifyCapacity";
+import { hasPassedLimit, normalizeUrl } from "@linkwarden/lib";
 
 type OmnivoreItem = {
   id: string;
@@ -65,9 +65,10 @@ export default async function importFromOmnivore(
             continue;
           }
 
+          const trimmedUrl = item.url?.trim().slice(0, 2047);
           await prisma.link.create({
             data: {
-              url: item.url?.trim().slice(0, 2047),
+              url: normalizeUrl(trimmedUrl) || trimmedUrl,
               name: item.title?.trim().slice(0, 254) || "",
               description: item.description?.trim().slice(0, 2047) || "",
               image: item.thumbnail || "",
@@ -75,6 +76,11 @@ export default async function importFromOmnivore(
               collection: {
                 connect: {
                   id: newCollection.id,
+                },
+              },
+              owner: {
+                connect: {
+                  id: userId,
                 },
               },
               createdBy: {

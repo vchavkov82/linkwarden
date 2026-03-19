@@ -3,7 +3,7 @@ import { hasPassedLimit } from "./verifyCapacity";
 import Parser from "rss-parser";
 import { prisma } from "@linkwarden/prisma";
 import { withRetry } from "./withRetry";
-import { normalizeUrl, getUrlVariants } from "./normalizeUrl";
+import { normalizeUrl } from "./normalizeUrl";
 
 export const rssHandler = async (
   rssSubscription: RssSubscription,
@@ -67,11 +67,10 @@ export const rssHandler = async (
                 const normalized = normalizeUrl(item.link);
 
                 if (checkDuplicates && normalized) {
-                  const variants = getUrlVariants(normalized);
                   const existing = await tx.link.findFirst({
                     where: {
-                      OR: variants.map((v) => ({ url: v })),
-                      collection: { ownerId: rssSubscription.ownerId },
+                      url: normalized,
+                      ownerId: rssSubscription.ownerId,
                     },
                     select: { id: true },
                   });
@@ -91,6 +90,11 @@ export const rssHandler = async (
                     url: normalized,
                     type: "url",
                     createdBy: {
+                      connect: {
+                        id: rssSubscription.ownerId,
+                      },
+                    },
+                    owner: {
                       connect: {
                         id: rssSubscription.ownerId,
                       },

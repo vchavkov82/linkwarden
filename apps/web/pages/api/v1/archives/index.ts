@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import formidable from "formidable";
 import fs from "fs";
 import { createFile, createFolder } from "@linkwarden/filesystem";
-import { generatePreview } from "@linkwarden/lib/generatePreview";
+import { generatePreview, normalizeUrl } from "@linkwarden/lib";
 import verifyUser from "@/lib/api/verifyUser";
 import { prisma } from "@linkwarden/prisma";
 import { UsersAndCollections } from "@linkwarden/prisma/client";
@@ -11,7 +11,6 @@ import isDemoMode from "@/lib/api/isDemoMode";
 import getSuffixFromFormat from "@/lib/shared/getSuffixFromFormat";
 import setCollection from "@/lib/api/setCollection";
 import fetchTitleAndHeaders from "@/lib/shared/fetchTitleAndHeaders";
-import { isUrlSafeForServerSideFetch } from "@linkwarden/lib/ssrf";
 
 export const config = {
   api: {
@@ -113,9 +112,6 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       }
 
       const url = typeof fields.url === "string" ? fields.url : fields.url?.[0];
-      const shouldFetchUrl = url
-        ? await isUrlSafeForServerSideFetch(url)
-        : false;
 
       // Validate input against Zod schema
       const dataValidation = UploadFileSchema.safeParse({
@@ -157,7 +153,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       const isImage = mimetype?.includes("image");
       const isHTML = mimetype === "text/html";
 
-      const { title = "" } = url && (shouldFetchUrl || isHTML)
+      const { title = "" } = url
         ? await fetchTitleAndHeaders(
             url,
             isHTML && !isPreview ? fileBuffer.toString("utf-8") : undefined
@@ -177,7 +173,12 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
               id: collection.id,
             },
           },
-          url,
+          owner: {
+            connect: {
+              id: collection.ownerId,
+            },
+          },
+          url: normalizeUrl(url) || url,
 
           // temporarily prevent archiveHandler and other processes from overwriting the file while we're uploading it
           lastPreserved: new Date(0).toISOString(),

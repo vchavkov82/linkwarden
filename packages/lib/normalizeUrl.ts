@@ -33,7 +33,7 @@ export interface NormalizeUrlOptions {
 const DEFAULT_OPTIONS: NormalizeUrlOptions = {
   stripFragment: true,
   stripTrackingParams: true,
-  stripWww: false,
+  stripWww: true,
   forceHttps: false,
 };
 

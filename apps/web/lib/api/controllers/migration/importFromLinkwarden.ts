@@ -1,7 +1,7 @@
 import { prisma } from "@linkwarden/prisma";
-import { Backup } from "@linkwarden/types/global";
+import { Backup } from "@linkwarden/types";
 import { createFolder } from "@linkwarden/filesystem";
-import { hasPassedLimit } from "@linkwarden/lib/verifyCapacity";
+import { hasPassedLimit, normalizeUrl } from "@linkwarden/lib";
 
 export default async function importFromLinkwarden(
   userId: number,
@@ -61,15 +61,21 @@ export default async function importFromLinkwarden(
               }
             }
 
+            const trimmedUrl = link.url?.trim().slice(0, 2047);
             const newLink = await prisma.link.create({
               data: {
-                url: link.url?.trim().slice(0, 2047),
+                url: normalizeUrl(trimmedUrl) || trimmedUrl,
                 name: link.name?.trim().slice(0, 254),
                 description: link.description?.trim().slice(0, 254),
                 importDate: new Date(link.importDate || link.createdAt),
                 collection: {
                   connect: {
                     id: newCollection.id,
+                  },
+                },
+                owner: {
+                  connect: {
+                    id: userId,
                   },
                 },
                 createdBy: {

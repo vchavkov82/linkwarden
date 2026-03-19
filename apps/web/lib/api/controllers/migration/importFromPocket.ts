@@ -1,6 +1,6 @@
 import { prisma } from "@linkwarden/prisma";
 import { createFolder } from "@linkwarden/filesystem";
-import { hasPassedLimit } from "@linkwarden/lib/verifyCapacity";
+import { hasPassedLimit, normalizeUrl } from "@linkwarden/lib";
 import Papa from "papaparse";
 
 type PocketBackup = {
@@ -63,9 +63,10 @@ export default async function importFromPocket(
             }
           }
 
+          const trimmedUrl = link.url?.slice(0, 2047).trim();
           await prisma.link.create({
             data: {
-              url: link.url?.slice(0, 2047).trim(),
+              url: normalizeUrl(trimmedUrl) || trimmedUrl,
               name: link.title?.slice(0, 254).trim() || "",
               importDate: link.time_added
                 ? new Date(Number(link.time_added) * 1000).toISOString()
@@ -73,6 +74,11 @@ export default async function importFromPocket(
               collection: {
                 connect: {
                   id: newCollection.id,
+                },
+              },
+              owner: {
+                connect: {
+                  id: userId,
                 },
               },
               tags: {
