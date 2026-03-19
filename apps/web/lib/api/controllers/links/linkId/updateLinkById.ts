@@ -7,7 +7,7 @@ import {
   UpdateLinkSchema,
   UpdateLinkSchemaType,
 } from "@linkwarden/lib/schemaValidation";
-import { withRetry } from "@linkwarden/lib";
+import { withRetry, normalizeUrl } from "@linkwarden/lib";
 
 export default async function updateLinkById(
   userId: number,
@@ -131,18 +131,19 @@ export default async function updateLinkById(
       },
     }));
 
-    if (
-      data.url &&
-      oldLink &&
-      oldLink?.url !== data.url &&
-      isValidUrl(data.url)
-    ) {
-      await removeFiles(oldLink.id, oldLink.collectionId);
-    } else if (oldLink?.url !== data.url)
-      return {
-        response: "Invalid URL.",
-        status: 401,
-      };
+    const normalizedUrl = data.url ? normalizeUrl(data.url) || data.url : null;
+    const urlChanged = oldLink?.url !== normalizedUrl;
+
+    if (urlChanged && data.url && oldLink) {
+      if (isValidUrl(data.url)) {
+        await removeFiles(oldLink.id, oldLink.collectionId);
+      } else {
+        return {
+          response: "Invalid URL.",
+          status: 401,
+        };
+      }
+    }
 
     const updatedLink = await withRetry(() =>
       prisma.link.update({
@@ -151,18 +152,23 @@ export default async function updateLinkById(
         },
         data: {
           name: data.name || "",
-          url: data.url,
+          url: normalizedUrl,
           description: data.description || "",
           icon: data.icon,
           iconWeight: data.iconWeight,
           color: data.color,
-          image: oldLink?.url !== data.url ? null : undefined,
-          pdf: oldLink?.url !== data.url ? null : undefined,
-          readable: oldLink?.url !== data.url ? null : undefined,
-          monolith: oldLink?.url !== data.url ? null : undefined,
-          preview: oldLink?.url !== data.url ? null : undefined,
-          lastPreserved: oldLink?.url !== data.url ? null : undefined,
+          image: urlChanged ? null : undefined,
+          pdf: urlChanged ? null : undefined,
+          readable: urlChanged ? null : undefined,
+          monolith: urlChanged ? null : undefined,
+          preview: urlChanged ? null : undefined,
+          lastPreserved: urlChanged ? null : undefined,
           indexVersion: null,
+          owner: {
+            connect: {
+              id: data.collection.ownerId,
+            },
+          },
           collection: {
             connect: {
               id: data.collection.id,
