@@ -82,7 +82,7 @@ export default async function postLink(
             const existingLink = await tx.link.findFirst({
               where: {
                 url: normalized,
-                ownerId: userId,
+                ownerId: linkCollection.ownerId,
               },
               select: { id: true },
             });
