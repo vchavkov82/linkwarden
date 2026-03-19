@@ -145,6 +145,8 @@ model Collection {
   updatedAt        DateTime              @default(now()) @updatedAt
   DashboardSection DashboardSection[]
 
+  // Note: A partial unique index exists on (name, ownerId) WHERE parentId IS NULL
+  // to prevent duplicate top-level collections (e.g. "Unorganized"). See migration SQL.
   @@index([ownerId])
 }
 
