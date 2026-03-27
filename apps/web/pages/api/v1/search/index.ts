@@ -7,6 +7,10 @@ export default async function search(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (process.env.DEBUG_API === "true") {
+    console.log(`[SEARCH-DEBUG] ${req.method} ${req.url} | referer=${req.headers.referer ?? "none"} | cookie=${req.headers.cookie ? "present" : "absent"}`);
+  }
+
   const user = await verifyUser({ req, res });
   if (!user) return;
 

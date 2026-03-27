@@ -33,6 +33,9 @@ yarn prisma:studio    # open Prisma Studio GUI
 # Formatting
 yarn format
 
+# Linting (from apps/web)
+cd apps/web && yarn lint
+
 # E2E tests (Playwright, from apps/web)
 cd apps/web && npx playwright test
 cd apps/web && npx playwright test e2e/dashboard/links.spec.ts  # single test file
@@ -92,6 +95,27 @@ The `packages/router` package provides React Query hooks used by both `apps/web`
 ### i18n
 
 Uses next-i18next with 14 locales. Translation files are in `apps/web/public/locales/`. Use `useTranslation()` hook in components.
+
+### Frontend Patterns
+
+**Path alias:** `@/` maps to `apps/web/` (e.g., `@/components/...`, `@/lib/client/...`, `@/store/...`).
+
+**State management:** Zustand stores in `apps/web/store/`. Two main stores: `links.ts` (link list state) and `localSettings.ts` (UI preferences like view mode, sort). Server state is handled exclusively via React Query hooks from `packages/router`.
+
+**Icons:** Use `@phosphor-icons/react`. Icon components accept a `weight` prop (`"regular"`, `"bold"`, `"fill"`, etc.).
+
+**UI components:** DaisyUI utility classes for base styling. Radix UI primitives (`apps/web/components/ui/`) for accessible composites (tabs, dropdowns, checkboxes, tooltips). Use `cn()` from `@linkwarden/lib` for conditional class merging.
+
+**Drag and drop:** `@dnd-kit/core` + `@dnd-kit/sortable`. Wrap drag zones in `<DragNDrop>` (`apps/web/components/DragNDrop.tsx`). Collection sidebar tree uses `@atlaskit/tree` separately in `CollectionListing.tsx`.
+
+**Toasts:** `react-hot-toast` — use `toast.success()` / `toast.error()`.
+
+### Key Utilities
+
+- `apps/web/lib/client/` — client-only helpers (e.g., `openLink.ts`, `unescapeString.ts`, `pinLink.ts`)
+- `apps/web/lib/api/` — server-side helpers (auth, controllers, Stripe)
+- `packages/lib/` — shared utilities used across packages (includes `cn()`, `formatStats`)
+- `apps/web/hooks/` — custom React hooks (permissions, sorting, intersection observer)
 
 ## Environment Setup
 

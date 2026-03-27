@@ -14,7 +14,7 @@ import LinkIcon from "./LinkViews/LinkComponents/LinkIcon";
 import { LinkIncludingShortenedCollectionAndTags } from "@linkwarden/types/global";
 import toast from "react-hot-toast";
 import { useUpdateLink } from "@linkwarden/router/links";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "next-i18next";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { customCollisionDetectionAlgorithm } from "@/lib/utils";
 import usePinLink from "@/lib/client/pinLink";

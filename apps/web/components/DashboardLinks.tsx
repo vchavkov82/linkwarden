@@ -1,9 +1,9 @@
-import { LinkIncludingShortenedCollectionAndTags } from "@linkwarden/types/global";
+import { LinkIncludingShortenedCollectionAndTags } from "@linkwarden/types";
 import useLocalSettingsStore from "@/store/localSettings";
 import {
   ArchivedFormat,
   CollectionIncludingMembersAndLinkCount,
-} from "@linkwarden/types/global";
+} from "@linkwarden/types";
 import { useEffect, useRef, useState } from "react";
 import unescapeString from "@/lib/client/unescapeString";
 import LinkActions from "@/components/LinkViews/LinkComponents/LinkActions";
@@ -14,10 +14,8 @@ import {
   atLeastOneFormatAvailable,
   formatAvailable,
 } from "@linkwarden/lib/formatStats";
-import useOnScreen from "@/hooks/useOnScreen";
 import { useCollections } from "@linkwarden/router/collections";
 import { useUser } from "@linkwarden/router/user";
-import { useGetLink } from "@linkwarden/router/links";
 import { useRouter } from "next/router";
 import openLink from "@/lib/client/openLink";
 import LinkIcon from "./LinkViews/LinkComponents/LinkIcon";
@@ -26,7 +24,7 @@ import LinkTypeBadge from "./LinkViews/LinkComponents/LinkTypeBadge";
 import LinkPin from "./LinkViews/LinkComponents/LinkPin";
 import { Separator } from "./ui/separator";
 import { useDraggable } from "@dnd-kit/core";
-import { cn } from "@linkwarden/lib/utils";
+import { cn } from "@linkwarden/lib";
 import { useTranslation } from "next-i18next";
 
 export function DashboardLinks({
@@ -40,7 +38,7 @@ export function DashboardLinks({
 }) {
   return (
     <div
-      className={`flex gap-3 overflow-x-auto overflow-y-hidden hide-scrollbar w-full min-h-fit`}
+      className={`flex gap-5 overflow-x-auto overflow-y-hidden hide-scrollbar w-full min-h-fit`}
     >
       {isLoading ? (
         <div className="flex flex-col gap-4 min-w-60 w-60">
@@ -51,7 +49,7 @@ export function DashboardLinks({
           <div className="skeleton h-3 w-1/3"></div>
         </div>
       ) : (
-        links?.map((e, i) => <Card key={i} link={e} dashboardType={type} />)
+        links?.map((e) => <Card key={e.id} link={e} dashboardType={type} />)
       )}
     </div>
   );
@@ -85,8 +83,6 @@ export function Card({ link, editMode, dashboardType }: Props) {
   const router = useRouter();
   const isPublicRoute = router.pathname.startsWith("/public") ? true : false;
 
-  const { refetch } = useGetLink({ id: link.id as number, isPublicRoute });
-
   const [collection, setCollection] =
     useState<CollectionIncludingMembersAndLinkCount>(
       collections.find(
@@ -100,34 +96,11 @@ export function Card({ link, editMode, dashboardType }: Props) {
         (e) => e.id === link.collection.id
       ) as CollectionIncludingMembersAndLinkCount
     );
-  }, [collections, link]);
+  }, [collections, link.collection.id]);
 
   const ref = useRef<HTMLDivElement>(null);
-  const isVisible = useOnScreen(ref);
 
   const [linkModal, setLinkModal] = useState(false);
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-
-    if (
-      isVisible &&
-      !link.preview?.startsWith("archives") &&
-      link.preview !== "unavailable"
-    ) {
-      interval = setInterval(async () => {
-        refetch().catch((error) => {
-          console.error("Error refetching link:", error);
-        });
-      }, 5000);
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isVisible, link.preview]);
 
   return (
     <div
@@ -149,48 +122,6 @@ export function Card({ link, editMode, dashboardType }: Props) {
           {...listeners}
           {...attributes}
         >
-          {show.image && (
-            <div>
-              <div className={`relative rounded-t-xl h-40 overflow-hidden`}>
-                {formatAvailable(link, "preview") ? (
-                  <Image
-                    src={`/api/v1/archives/${link.id}?format=${ArchivedFormat.jpeg}&preview=true&updatedAt=${link.updatedAt}`}
-                    width={1280}
-                    height={720}
-                    alt=""
-                    className={`rounded-t-xl select-none object-cover z-10 h-40 w-full shadow opacity-80 scale-105`}
-                    style={show.icon ? { filter: "blur(1px)" } : undefined}
-                    draggable="false"
-                    onError={(e) => {
-                      const target = e.target as HTMLElement;
-                      target.style.display = "none";
-                    }}
-                    unoptimized
-                  />
-                ) : link.preview === "unavailable" ? (
-                  <div className={`bg-gray-50 h-40 bg-opacity-80`}></div>
-                ) : (
-                  <div
-                    className={`h-40 bg-opacity-80 skeleton rounded-none`}
-                  ></div>
-                )}
-                {show.icon && (
-                  <div className="absolute top-0 left-0 right-0 bottom-0 rounded-t-xl flex items-center justify-center rounded-md">
-                    <LinkIcon link={link} />
-                  </div>
-                )}
-                {show.preserved_formats &&
-                  link.type === "url" &&
-                  atLeastOneFormatAvailable(link) && (
-                    <div className="absolute bottom-0 right-0 m-2 bg-base-200 bg-opacity-60 px-1 rounded-md">
-                      <LinkFormats link={link} />
-                    </div>
-                  )}
-              </div>
-              <Separator />
-            </div>
-          )}
-
           <div className="flex flex-col justify-between h-full min-h-11">
             <div className="p-3 flex flex-col justify-between h-full gap-2">
               {show.name && (

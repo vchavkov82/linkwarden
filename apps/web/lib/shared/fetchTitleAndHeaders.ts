@@ -1,23 +1,57 @@
-import { safeFetch } from "@linkwarden/lib/safeFetch";
+import fetch from "node-fetch";
+import https from "https";
+import http from "http";
+import { HttpsProxyAgent } from "https-proxy-agent";
+import { SocksProxyAgent } from "socks-proxy-agent";
 
 export default async function fetchTitleAndHeaders(
   url: string,
   content?: string
 ) {
-  if (!content && !url?.startsWith("http://") && !url?.startsWith("https://"))
+  if (!url?.startsWith("http://") && !url?.startsWith("https://"))
     return { title: "", headers: null };
 
   try {
-    const responsePromise = content ? Promise.resolve(null) : safeFetch(url);
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error("Fetch title timeout"));
-      }, 10 * 1000); // Stop after 10 seconds
-    });
+    const httpsAgent = url?.startsWith("http://")
+      ? new http.Agent({})
+      : new https.Agent({
+          rejectUnauthorized:
+            process.env.IGNORE_UNAUTHORIZED_CA === "true" ? false : true,
+        });
 
-    const response = await Promise.race([responsePromise, timeoutPromise]);
+    // fetchOpts allows a proxy to be defined
+    let fetchOpts = {
+      agent: httpsAgent,
+    };
 
-    if ((response as any)?.status || content) {
+    if (process.env.PROXY) {
+      // parse proxy url
+      let proxy = new URL(process.env.PROXY);
+      // if authentication set, apply to proxy URL
+      if (process.env.PROXY_USERNAME) {
+        proxy.username = process.env.PROXY_USERNAME;
+        proxy.password = process.env.PROXY_PASSWORD || "";
+      }
+
+      const proxyAgent = proxy.protocol.includes("http")
+        ? HttpsProxyAgent
+        : SocksProxyAgent;
+
+      // add socks5/http/https proxy to fetchOpts
+      fetchOpts = { agent: new proxyAgent(proxy.toString()) };
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2 * 1000);
+
+    let response;
+    try {
+      response = await fetch(url, { ...fetchOpts, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if ((response as any)?.status) {
       let text: string;
 
       if (content) {
@@ -26,7 +60,7 @@ export default async function fetchTitleAndHeaders(
         text = await (response as any).text();
       }
 
-      const headers = (response as Response | null)?.headers || null;
+      const headers = (response as unknown as Response)?.headers || null;
 
       // regular expression to find the <title> tag
       let match = text.match(/<title.*>([^<]*)<\/title>/);
@@ -37,8 +71,8 @@ export default async function fetchTitleAndHeaders(
     } else {
       return { title: "", headers: null };
     }
-  } catch (err) {
-    console.log(err);
+  } catch (err: any) {
+    if (err?.name !== "AbortError") console.log(err);
     return { title: "", headers: null };
   }
 }

@@ -11,9 +11,9 @@ export default async function links(req: NextApiRequest, res: NextApiResponse) {
   if (!user) return;
 
   if (req.method === "GET") {
-    // Convert the type of the request query to "LinkRequestQuery"
+    const sortNum = Number(req.query.sort as string);
     const convertedData: LinkRequestQuery = {
-      sort: Number(req.query.sort as string),
+      sort: Number.isNaN(sortNum) ? 0 : sortNum,
       cursor: req.query.cursor ? Number(req.query.cursor as string) : undefined,
       collectionId: req.query.collectionId
         ? Number(req.query.collectionId as string)
@@ -47,6 +47,14 @@ export default async function links(req: NextApiRequest, res: NextApiResponse) {
           "This action is disabled because this is a read-only demo of Linkwarden.",
       });
 
+    if (
+      !req.body.links ||
+      !Array.isArray(req.body.links) ||
+      req.body.links.length === 0
+    ) {
+      return res.status(400).json({ response: "Invalid or missing links array." });
+    }
+
     const updated = await updateLinks(
       user.id,
       req.body.links,
@@ -64,9 +72,19 @@ export default async function links(req: NextApiRequest, res: NextApiResponse) {
           "This action is disabled because this is a read-only demo of Linkwarden.",
       });
 
+    if (
+      !req.body.linkIds ||
+      !Array.isArray(req.body.linkIds) ||
+      req.body.linkIds.length === 0
+    ) {
+      return res.status(400).json({ response: "Invalid or missing linkIds array." });
+    }
+
     const deleted = await deleteLinksById(user.id, req.body.linkIds);
     return res.status(deleted.status).json({
       response: deleted.response,
     });
+  } else {
+    return res.status(405).json({ response: "Method not allowed." });
   }
 }

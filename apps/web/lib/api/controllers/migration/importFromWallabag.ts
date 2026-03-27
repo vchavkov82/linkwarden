@@ -46,8 +46,8 @@ export default async function importFromWallabag(
 
   await prisma
     .$transaction(
-      async () => {
-        const newCollection = await prisma.collection.create({
+      async (tx) => {
+        const newCollection = await tx.collection.create({
           data: {
             owner: {
               connect: {
@@ -75,12 +75,20 @@ export default async function importFromWallabag(
           }
 
           const trimmedUrl = link.url?.trim().slice(0, 2047);
-          await prisma.link.create({
+          const normalized = normalizeUrl(trimmedUrl) || trimmedUrl;
+
+          const existing = await tx.link.findFirst({
+            where: { url: normalized, ownerId: userId },
+            select: { id: true },
+          });
+          if (existing) continue;
+
+          await tx.link.create({
             data: {
               pinnedBy: link.is_starred
                 ? { connect: { id: userId } }
                 : undefined,
-              url: normalizeUrl(trimmedUrl) || trimmedUrl,
+              url: normalized,
               name: link.title?.trim().slice(0, 254) || "",
               textContent: link.content?.trim().slice(0, 2047) || "",
               importDate: link.created_at || null,

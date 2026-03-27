@@ -217,10 +217,18 @@ const createLink = async (
     }
   }
 
+  const normalized = normalizeUrl(url) || url;
+
+  const existing = await prisma.link.findFirst({
+    where: { url: normalized, ownerId: userId },
+    select: { id: true },
+  });
+  if (existing) return;
+
   await prisma.link.create({
     data: {
       name: name || "",
-      url: normalizeUrl(url) || url,
+      url: normalized,
       description,
       collectionId,
       ownerId: userId,

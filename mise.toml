@@ -1,0 +1,197 @@
+[tools]
+node = "20"
+
+[tasks.restart]
+description = "Restart all podman-compose services"
+run = "podman-compose down && podman-compose up -d"
+
+[tasks.up]
+description = "Start services (if not running)"
+run = "podman-compose up -d"
+
+[tasks.down]
+description = "Stop all services"
+run = "podman-compose down"
+
+[tasks.logs]
+description = "Follow logs for all services"
+run = "podman-compose logs -f"
+
+[tasks.reboot]
+description = "Reboot the server"
+run = "sudo reboot"
+
+[tasks.build]
+description = "Build Docker image"
+run = "podman build -t docker.svc.assistance.bg:6000/assistance/linkwarden:latest ."
+
+[tasks.push]
+description = "Push built image to local registry"
+run = "podman push docker.svc.assistance.bg:6000/assistance/linkwarden:latest"
+
+[tasks."build:push"]
+description = "Build and push image"
+depends = ["build", "push"]
+
+[tasks.install]
+description = "Install dependencies and Playwright browsers"
+run = """
+yarn install
+cd apps/web && npx playwright install chromium
+"""
+
+[tasks."db:migrate"]
+description = "Apply pending Prisma migrations (runs inside container)"
+run = "podman exec linkwarden_linkwarden_1 sh -c 'yarn prisma:deploy'"
+
+[tasks."db:generate"]
+description = "Regenerate Prisma client"
+run = "yarn prisma:generate"
+
+[tasks."db:studio"]
+description = "Open Prisma Studio (runs inside container)"
+run = "podman exec -it linkwarden_linkwarden_1 sh -c 'yarn prisma:studio'"
+
+[tasks."db:migrate:dev"]
+description = "Create and apply new migration from schema changes (runs inside container)"
+run = "podman exec -it linkwarden_linkwarden_1 sh -c 'yarn prisma:dev'"
+
+[tasks.kill]
+description = "Kill processes on dev ports (6010)"
+run = "ss -tlpn | grep ':6010 ' | grep -oP 'pid=\\K\\d+' | xargs -r kill -9 || true"
+
+[tasks."dev:start"]
+description = "Start dev dependencies (postgres + meilisearch)"
+run = """
+if podman container exists linkwarden_postgres_1 && podman container exists linkwarden_meilisearch_1; then
+  podman start linkwarden_postgres_1 linkwarden_meilisearch_1 >/dev/null 2>&1 || true
+else
+  podman-compose up -d postgres meilisearch
+fi
+"""
+
+[tasks."dev:stop"]
+description = "Stop dev dependencies"
+run = "podman-compose stop postgres meilisearch"
+
+[tasks."dev:kill"]
+description = "Kill dev dependencies and dev server"
+depends = ["kill"]
+run = "podman-compose down"
+
+[tasks.dev]
+description = "Start dependencies and run web + worker in dev mode"
+depends = ["dev:start", "kill"]
+run = """
+dotenv -f .env.dev run -- sh -c 'yarn concurrently \
+  "yarn workspace @linkwarden/web dev" \
+  "yarn workspace @linkwarden/worker dev"'
+"""
+
+[tasks."dev:debug"]
+description = "Start dev server with API debug logging (low noise)"
+depends = ["dev:start", "kill"]
+run = """
+dotenv -f .env.dev run -- sh -c 'DEBUG_API=true yarn concurrently \
+  "yarn workspace @linkwarden/web dev" \
+  "yarn workspace @linkwarden/worker dev"'
+"""
+
+[tasks."dev:debug:all"]
+description = "Start dev server with full DEBUG=* logging (very noisy)"
+depends = ["dev:start", "kill"]
+run = """
+dotenv -f .env.dev run -- sh -c 'DEBUG_API=true DEBUG=* yarn concurrently \
+  "yarn workspace @linkwarden/web dev" \
+  "yarn workspace @linkwarden/worker dev"'
+"""
+
+[tasks."api:test"]
+description = "Test API endpoints with curl"
+env = { API_URL = "http://localhost:6010" }
+run = """
+echo "Testing API health..."
+curl -s $API_URL/api/v1/config | jq .
+
+echo ""
+echo "Testing session endpoint (should fail without credentials)..."
+curl -s -X POST $API_URL/api/v1/session -H "Content-Type: application/json" -d '{"username":"test","password":"testpass123"}' | jq .
+"""
+
+[tasks."api:token"]
+description = "Test API with access token"
+run = """
+read -p "Enter your access token: " TOKEN
+read -p "Enter API URL (default: http://localhost:6010): " API_URL
+API_URL=${API_URL:-http://localhost:6010}
+
+echo ""
+echo "Testing /api/v1/users/me..."
+curl -s -H "Authorization: Bearer $TOKEN" $API_URL/api/v1/users/me | jq .
+
+echo ""
+echo "Testing /api/v1/links..."
+curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/api/v1/links?take=5" | jq .
+
+echo ""
+echo "Testing /api/v1/collections..."
+curl -s -H "Authorization: Bearer $TOKEN" $API_URL/api/v1/collections | jq .
+"""
+
+[tasks."api:debug"]
+description = "Run comprehensive API debug tests"
+run = "./scripts/debug-api.sh"
+
+[tasks."api:debug:auth"]
+description = "Run API debug tests with token (prompts for token)"
+run = """
+read -p "Enter your access token: " TOKEN
+./scripts/debug-api.sh "$TOKEN" "http://localhost:6010"
+"""
+
+[tasks."api:debug:prod"]
+description = "Run API debug tests against production"
+run = """
+read -p "Enter your access token: " TOKEN
+./scripts/debug-api.sh "$TOKEN" "https://links.svc.assistance.bg"
+"""
+
+[tasks.format]
+description = "Format all source files"
+run = "yarn format"
+
+[tasks.lint]
+description = "Lint web app"
+run = "cd apps/web && yarn lint"
+
+[tasks.test]
+description = "Run all tests (unit + integration)"
+run = "yarn test"
+
+[tasks."test:watch"]
+description = "Run tests in watch mode"
+run = "yarn test:watch"
+
+[tasks."test:coverage"]
+description = "Run tests with coverage report"
+run = "yarn test:coverage"
+
+[tasks."test:e2e"]
+description = "Run Playwright E2E tests"
+env = { TEST_USERNAME = "admin", TEST_PASSWORD = "adminpass" }
+run = "cd apps/web && npx playwright test"
+
+[tasks."test:e2e:ui"]
+description = "Run Playwright E2E tests with UI"
+env = { TEST_USERNAME = "admin", TEST_PASSWORD = "adminpass" }
+run = "cd apps/web && npx playwright test --ui"
+
+[tasks."test:e2e:headed"]
+description = "Run Playwright E2E tests in headed mode"
+env = { TEST_USERNAME = "admin", TEST_PASSWORD = "adminpass" }
+run = "cd apps/web && npx playwright test --headed"
+
+[tasks."test:all"]
+description = "Run all tests (unit + e2e)"
+depends = ["test"]
+run = "cd apps/web && npx playwright test"

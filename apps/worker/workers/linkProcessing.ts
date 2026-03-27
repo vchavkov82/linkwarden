@@ -22,62 +22,72 @@ export async function linkProcessing(interval = 10) {
       }
     } catch {}
     console.log("\x1b[34m%s\x1b[0m", `Restarting main browser (${reason})...`);
-    browser = await launchBrowser();
-    browserStartTs = Date.now();
+    try {
+      browser = await launchBrowser();
+      browserStartTs = Date.now();
+    } catch (err) {
+      console.error("\x1b[34m%s\x1b[0m", "Failed to relaunch browser:", err);
+      await delay(5);
+      browser = await launchBrowser();
+      browserStartTs = Date.now();
+    }
   };
 
   while (true) {
-    // Restart every 30 minutes to prevent clogging
-    if (Date.now() - browserStartTs >= BROWSER_MAX_AGE_MS) {
-      await restartBrowser("30-minute rotation");
-    }
-
-    const links = await getLinkBatchFairly({
-      maxBatchLinks: ARCHIVE_TAKE_COUNT,
-    });
-
-    if (links.length === 0) {
-      await delay(interval);
-      continue;
-    }
-
-    const archiveLink = async (link: LinkWithCollectionOwnerAndTags) => {
-      try {
-        console.log(
-          "\x1b[34m%s\x1b[0m",
-          `- Link ${link.url} for user ${link.collection.ownerId}`
-        );
-
-        await archiveHandler(link, browser);
-
-        console.log(
-          "\x1b[34m%s\x1b[0m",
-          `Succeeded processing link ${link.url} for user ${link.collection.ownerId}.`
-        );
-      } catch (error: any) {
-        console.error(
-          "\x1b[34m%s\x1b[0m",
-          `Error processing link ${link.url} for user ${link.collection.ownerId}:`,
-          error
-        );
-
-        if (!browser.isConnected?.()) {
-          await restartBrowser("browser disconnected");
-        }
+    try {
+      if (Date.now() - browserStartTs >= BROWSER_MAX_AGE_MS) {
+        await restartBrowser("30-minute rotation");
       }
-    };
 
-    const processingPromises = links.map((e) => archiveLink(e));
-    await Promise.allSettled(processingPromises);
+      const links = await getLinkBatchFairly({
+        maxBatchLinks: ARCHIVE_TAKE_COUNT,
+      });
 
-    const unprocessedLinkCount = await countUnprocessedBillableLinks();
+      if (links.length === 0) {
+        await delay(interval);
+        continue;
+      }
 
-    console.log(
-      "\x1b[34m%s\x1b[0m",
-      `Processed ${links.length} link${
-        links.length === 1 ? "" : "s"
-      }, ${unprocessedLinkCount} left.`
-    );
+      const archiveLink = async (link: LinkWithCollectionOwnerAndTags) => {
+        try {
+          console.log(
+            "\x1b[34m%s\x1b[0m",
+            `- Link ${link.url} for user ${link.collection.ownerId}`
+          );
+
+          await archiveHandler(link, browser);
+
+          console.log(
+            "\x1b[34m%s\x1b[0m",
+            `Succeeded processing link ${link.url} for user ${link.collection.ownerId}.`
+          );
+        } catch (error: any) {
+          console.error(
+            "\x1b[34m%s\x1b[0m",
+            `Error processing link ${link.url} for user ${link.collection.ownerId}:`,
+            error
+          );
+
+          if (!browser.isConnected?.()) {
+            await restartBrowser("browser disconnected");
+          }
+        }
+      };
+
+      const processingPromises = links.map((e) => archiveLink(e));
+      await Promise.allSettled(processingPromises);
+
+      console.log(
+        "\x1b[34m%s\x1b[0m",
+        `Processed ${links.length} link${links.length === 1 ? "" : "s"}.`
+      );
+    } catch (err) {
+      console.error(
+        "\x1b[34m%s\x1b[0m",
+        "linkProcessing error, retrying next cycle:",
+        err
+      );
+    }
 
     await delay(interval);
   }

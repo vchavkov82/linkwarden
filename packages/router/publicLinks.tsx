@@ -50,11 +50,19 @@ const useFetchLinks = (params: string) => {
             ? "&" + (params.queryKey[1] as any).params
             : "")
       );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          return { links: [] as LinkIncludingShortenedCollectionAndTags[], nextCursor: null };
+        }
+        throw new Error(`Failed to fetch public links: ${response.status}`);
+      }
+
       const data = await response.json();
 
       return {
-        links: data.data.links as LinkIncludingShortenedCollectionAndTags[],
-        nextCursor: data.data.nextCursor as number | null,
+        links: (data.data?.links ?? []) as LinkIncludingShortenedCollectionAndTags[],
+        nextCursor: (data.data?.nextCursor ?? null) as number | null,
       };
     },
     initialPageParam: 0,

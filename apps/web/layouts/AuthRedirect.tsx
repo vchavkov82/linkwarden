@@ -81,7 +81,18 @@ export default function AuthRedirect({ children }: Props) {
   }, [status, user, router.pathname]);
 
   function redirectTo(destination: string) {
-    router.push(destination).then(() => setShouldRenderChildren(true));
+    if (router.pathname === destination) {
+      setShouldRenderChildren(true);
+      return;
+    }
+
+    router
+      .push(destination)
+      .then(() => setShouldRenderChildren(true))
+      .catch((error) => {
+        // Next.js rejects push() promises when a navigation is cancelled.
+        if (!error?.cancelled) console.error(error);
+      });
   }
 
   if (status !== "loading" && shouldRenderChildren) {

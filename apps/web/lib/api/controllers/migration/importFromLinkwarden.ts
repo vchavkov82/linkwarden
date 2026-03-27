@@ -26,12 +26,11 @@ export default async function importFromLinkwarden(
 
   await prisma
     .$transaction(
-      async () => {
-        // Import collections
+      async (tx) => {
         for (const e of data.collections) {
           e.name = e.name.trim();
 
-          const newCollection = await prisma.collection.create({
+          const newCollection = await tx.collection.create({
             data: {
               owner: {
                 connect: {
@@ -51,7 +50,6 @@ export default async function importFromLinkwarden(
 
           createFolder({ filePath: `archives/${newCollection.id}` });
 
-          // Import Links
           for (const link of e.links) {
             if (link.url) {
               try {
@@ -62,9 +60,17 @@ export default async function importFromLinkwarden(
             }
 
             const trimmedUrl = link.url?.trim().slice(0, 2047);
-            const newLink = await prisma.link.create({
+            const normalized = normalizeUrl(trimmedUrl) || trimmedUrl;
+
+            const existing = await tx.link.findFirst({
+              where: { url: normalized, ownerId: userId },
+              select: { id: true },
+            });
+            if (existing) continue;
+
+            const newLink = await tx.link.create({
               data: {
-                url: normalizeUrl(trimmedUrl) || trimmedUrl,
+                url: normalized,
                 name: link.name?.trim().slice(0, 254),
                 description: link.description?.trim().slice(0, 254),
                 importDate: new Date(link.importDate || link.createdAt),
@@ -83,7 +89,6 @@ export default async function importFromLinkwarden(
                     id: userId,
                   },
                 },
-                // Import Tags
                 tags: {
                   connectOrCreate: link.tags.map((tag) => ({
                     where: {
@@ -104,19 +109,15 @@ export default async function importFromLinkwarden(
                 },
               },
             });
-            // Import pinnedLinks
-            data?.pinnedLinks.forEach(async (pinnedLink) => {
+
+            for (const pinnedLink of data?.pinnedLinks ?? []) {
               if (pinnedLink.url === newLink.url) {
-                await prisma.link.update({
-                  where: {
-                    id: newLink.id,
-                  },
-                  data: {
-                    pinnedBy: { connect: { id: userId } },
-                  },
+                await tx.link.update({
+                  where: { id: newLink.id },
+                  data: { pinnedBy: { connect: { id: userId } } },
                 });
               }
-            });
+            }
           }
         }
       },

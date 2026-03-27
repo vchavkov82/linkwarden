@@ -35,9 +35,13 @@ const Page: NextPageWithLayout = () => {
     if (editMode) return setEditMode(false);
   }, [router]);
 
+  const searchQuery = router.query.q
+    ? decodeURIComponent(router.query.q as string)
+    : undefined;
+
   const { links, data } = useLinks({
     sort: sortBy,
-    searchQueryString: decodeURIComponent(router.query.q as string),
+    searchQueryString: searchQuery,
   });
 
   return (

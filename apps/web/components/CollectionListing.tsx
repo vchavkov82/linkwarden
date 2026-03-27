@@ -72,8 +72,6 @@ const CollectionListing = () => {
             .map((e) => e.id as number),
         });
       else {
-        const newCollectionOrder: number[] = [...(user.collectionOrder || [])];
-
         // Start with collections that are in both account.collectionOrder and collections
         const existingCollectionIds = collections.map((c) => c.id as number);
         const filteredCollectionOrder = user.collectionOrder.filter((id: any) =>
@@ -90,14 +88,14 @@ const CollectionListing = () => {
           }
         });
 
-        // check if the newCollectionOrder is the same as the old one
+        // check if the filteredCollectionOrder is different from the current one
         if (
-          JSON.stringify(newCollectionOrder) !==
+          JSON.stringify(filteredCollectionOrder) !==
           JSON.stringify(user.collectionOrder)
         ) {
           updateUser.mutateAsync({
             ...user,
-            collectionOrder: newCollectionOrder,
+            collectionOrder: filteredCollectionOrder,
           });
         }
       }

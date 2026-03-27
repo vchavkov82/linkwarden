@@ -89,23 +89,35 @@ const useFetchLinks = (params: string, auth?: MobileAuth) => {
             }
           : undefined
       );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          return { links: [] as LinkIncludingShortenedCollectionAndTags[], nextCursor: null };
+        }
+        throw new Error(`Failed to fetch links: ${response.status}`);
+      }
+
       const data = await response.json();
 
       return {
-        links: data.data.links as LinkIncludingShortenedCollectionAndTags[],
-        nextCursor: data.data.nextCursor as number | null,
+        links: (data.data?.links ?? []) as LinkIncludingShortenedCollectionAndTags[],
+        nextCursor: (data.data?.nextCursor ?? null) as number | null,
       };
     },
     initialPageParam: 0,
     refetchOnWindowFocus: false,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: status === "authenticated",
+    retry: false,
   });
 };
 
 const buildQueryString = (params: LinkRequestQuery) => {
   return Object.keys(params)
-    .filter((key) => params[key as keyof LinkRequestQuery] !== undefined)
+    .filter((key) => {
+      const val = params[key as keyof LinkRequestQuery];
+      return val !== undefined && val !== null && val !== "";
+    })
     .map(
       (key) =>
         `${encodeURIComponent(key)}=${encodeURIComponent(
@@ -695,12 +707,32 @@ const useUpdateLink = ({
       queryClient.setQueryData(["dashboardData"], context.previousDashboard);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["links"] });
-      queryClient.invalidateQueries({ queryKey: ["link", data.id] });
-      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+      queryClient.setQueriesData({ queryKey: ["links"] }, (oldData: any) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            links: page.links.map((l: any) =>
+              l.id === data.id ? data : l
+            ),
+          })),
+        };
+      });
+
+      queryClient.setQueryData(["link", data.id], data);
+      queryClient.setQueryData(["dashboardData"], (oldData: any) => {
+        if (!oldData?.links) return oldData;
+        return {
+          ...oldData,
+          links: oldData.links.map((l: any) =>
+            l.id === data.id ? data : l
+          ),
+        };
+      });
+
       queryClient.invalidateQueries({ queryKey: ["collections"] });
       queryClient.invalidateQueries({ queryKey: ["tags"] });
-      queryClient.invalidateQueries({ queryKey: ["publicLinks"] });
     },
   });
 };
@@ -961,17 +993,21 @@ const useUploadFile = () => {
 
       if (!response.ok) throw new Error(data.response);
 
-      if (response.ok) {
+      if (response.ok && file) {
         const formBody = new FormData();
-        file && formBody.append("file", file);
+        formBody.append("file", file);
 
-        await fetch(
+        const uploadRes = await fetch(
           `/api/v1/archives/${(data as any).response.id}?format=${format}`,
           {
             body: formBody,
             method: "POST",
           }
         );
+
+        if (!uploadRes.ok) {
+          console.error("File upload failed:", uploadRes.status);
+        }
       }
 
       return data.response;
@@ -1040,16 +1076,17 @@ const useUpdateFile = () => {
         }
       );
 
-      const data = res.json();
+      if (!res.ok) {
+        throw new Error(`File upload failed: ${res.status}`);
+      }
+
+      const data = await res.json();
 
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["links"] });
       queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-      queryClient.invalidateQueries({ queryKey: ["collections"] });
-      queryClient.invalidateQueries({ queryKey: ["tags"] });
-      queryClient.invalidateQueries({ queryKey: ["publicLinks"] });
     },
   });
 };

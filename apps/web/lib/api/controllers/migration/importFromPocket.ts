@@ -35,8 +35,8 @@ export default async function importFromPocket(
 
   await prisma
     .$transaction(
-      async () => {
-        const newCollection = await prisma.collection.create({
+      async (tx) => {
+        const newCollection = await tx.collection.create({
           data: {
             owner: {
               connect: {
@@ -64,9 +64,17 @@ export default async function importFromPocket(
           }
 
           const trimmedUrl = link.url?.slice(0, 2047).trim();
-          await prisma.link.create({
+          const normalized = normalizeUrl(trimmedUrl) || trimmedUrl;
+
+          const existing = await tx.link.findFirst({
+            where: { url: normalized, ownerId: userId },
+            select: { id: true },
+          });
+          if (existing) continue;
+
+          await tx.link.create({
             data: {
-              url: normalizeUrl(trimmedUrl) || trimmedUrl,
+              url: normalized,
               name: link.title?.slice(0, 254).trim() || "",
               importDate: link.time_added
                 ? new Date(Number(link.time_added) * 1000).toISOString()

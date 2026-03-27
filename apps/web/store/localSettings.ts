@@ -85,7 +85,7 @@ const useLocalSettingsStore = create<LocalSettingsStore>((set) => ({
     const color = localStorage.getItem("color") || "--default";
     localStorage.setItem("color", color);
 
-    const viewMode = localStorage.getItem("viewMode") || "card";
+    const viewMode = localStorage.getItem("viewMode") || "list";
     localStorage.setItem("viewMode", viewMode);
 
     const columns = parseInt(localStorage.getItem("columns") || "0");

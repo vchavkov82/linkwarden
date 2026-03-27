@@ -26,11 +26,20 @@ const useDashboardData = (auth?: MobileAuth) => {
             }
           : undefined
       );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          return null;
+        }
+        throw new Error(`Failed to fetch dashboard: ${response.status}`);
+      }
+
       const data = await response.json();
 
       return data.data;
     },
     enabled: status === "authenticated",
+    retry: false,
   });
 };
 

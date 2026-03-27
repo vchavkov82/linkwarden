@@ -3,7 +3,10 @@ export default async function getLatestVersion(setShowAnnouncement: Function) {
   const announcementMessage = localStorage.getItem("announcementMessage");
 
   const response = await fetch(
-    `https://linkwarden.app/blog/latest-announcement.json`
+    `https://linkwarden.app/blog/latest-announcement.json`,
+    {
+      referrerPolicy: "no-referrer",
+    }
   );
 
   const data = await response.json();

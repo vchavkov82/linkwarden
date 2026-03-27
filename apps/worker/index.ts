@@ -1,9 +1,15 @@
-import { spawn } from "node:child_process";
+import { spawn, ChildProcess } from "node:child_process";
+
+let child: ChildProcess | null = null;
+let shuttingDown = false;
 
 function launch() {
-  const child = spawn("tsx", ["worker.ts"], { stdio: "inherit" });
+  child = spawn("tsx", ["worker.ts"], { stdio: "inherit" });
 
   child.on("exit", (code, signal) => {
+    if (shuttingDown) {
+      process.exit(0);
+    }
     console.error(
       `worker exited (code=${code} signal=${signal}) – restarting…`
     );
@@ -11,6 +17,16 @@ function launch() {
   });
 }
 
-process.on("SIGINT", () => process.exit());
+function shutdown() {
+  shuttingDown = true;
+  if (child) {
+    child.kill("SIGTERM");
+  } else {
+    process.exit(0);
+  }
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 launch();

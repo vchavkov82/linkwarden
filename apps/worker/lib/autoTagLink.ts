@@ -126,15 +126,30 @@ export default async function autoTagLink(
     return console.log("No predefined tags to auto tag for link: ", link.url);
   }
 
-  const { text } = await generateText({
-    model: getAIModel(),
-    prompt: prompt,
-  });
+  let text: string;
+  try {
+    const result = await generateText({
+      model: getAIModel(),
+      prompt: prompt,
+    });
+    text = result.text;
+  } catch (err) {
+    console.error("AI generateText failed for link:", link.url, err);
+    await prisma.link.update({
+      where: { id: linkId },
+      data: { aiTagged: true },
+    });
+    return;
+  }
 
   try {
     let tags: string[] = JSON.parse(text);
 
     if (!tags || tags.length === 0) {
+      await prisma.link.update({
+        where: { id: linkId },
+        data: { aiTagged: true },
+      });
       return;
     } else if (user.aiTaggingMethod === AiTaggingMethod.EXISTING) {
       tags = tags.filter((tag: string) => existingTagsNames.includes(tag));
@@ -180,7 +195,10 @@ export default async function autoTagLink(
       })
     );
   } catch (err) {
-    console.log("Error auto tagging link: ", link.url);
-    console.log("Error: ", err);
+    console.error("Error auto tagging link:", link.url, err);
+    await prisma.link.update({
+      where: { id: linkId },
+      data: { aiTagged: true },
+    }).catch(() => {});
   }
 }

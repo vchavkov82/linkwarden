@@ -15,8 +15,10 @@ export default async function fetchHeaders(url: string) {
     const response = await Promise.race([responsePromise, timeoutPromise]);
 
     return (response as Response)?.headers || null;
-  } catch (err) {
-    console.log(err);
+  } catch (err: any) {
+    if (err?.code !== "ENOTFOUND" && err?.code !== "ECONNREFUSED") {
+      console.log(err);
+    }
     return null;
   }
 }

@@ -7,7 +7,7 @@ import verifyToken from "@/lib/api/verifyToken";
 import verifyUser from "@/lib/api/verifyUser";
 import getPermission from "@/lib/api/getPermission";
 import { prisma } from "@linkwarden/prisma";
-import { UsersAndCollections } from "@linkwarden/prisma/client";
+import { Link, UsersAndCollections } from "@linkwarden/prisma/client";
 import { UploadFileSchema } from "@linkwarden/lib/schemaValidation";
 import isDemoMode from "@/lib/api/isDemoMode";
 import getSuffixFromFormat from "@/lib/shared/getSuffixFromFormat";
@@ -102,6 +102,62 @@ async function getAccessibleCollection(
 /** Route Handlers     */
 /** ------------------ */
 
+async function generatePreviewOnDemand(
+  link: Link,
+  collectionId: number
+): Promise<boolean> {
+  createFolder({ filePath: `archives/preview/${collectionId}` });
+
+  // 1. Try resizing the existing full screenshot / archived image
+  if (link.image && link.image.startsWith("archives/")) {
+    const { file, status } = await readFile(link.image);
+    if (status === 200 && Buffer.isBuffer(file)) {
+      return generatePreview(file, collectionId, link.id);
+    }
+  }
+
+  // 2. Fallback: fetch og:image from the link URL
+  if (!link.url) return false;
+
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const html = await fetch(link.url, { signal: controller.signal }).then(
+      (r) => r.text()
+    );
+
+    const match =
+      html.match(
+        /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
+      ) ??
+      html.match(
+        /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i
+      );
+
+    if (!match) return false;
+
+    let ogUrl = match[1];
+    if (!ogUrl.startsWith("http")) {
+      const origin = new URL(link.url).origin;
+      ogUrl = origin + (ogUrl.startsWith("/") ? ogUrl : "/" + ogUrl);
+    }
+
+    const imgController = new AbortController();
+    const imgTimeout = setTimeout(() => imgController.abort(), 10000);
+    try {
+      const imgRes = await fetch(ogUrl, { signal: imgController.signal });
+      const buffer = Buffer.from(await imgRes.arrayBuffer());
+      return generatePreview(buffer, collectionId, link.id);
+    } finally {
+      clearTimeout(imgTimeout);
+    }
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(fetchTimeout);
+  }
+}
+
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const linkId = Number(req.query.linkId);
   const format = Number(req.query.format);
@@ -130,11 +186,44 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     : `archives/${collection.id}/${linkId + suffix}`;
 
   const { file, contentType, status } = await readFile(filePath);
-  res
+
+  if (status === 200) {
+    return res
+      .setHeader("Content-Type", contentType)
+      .setHeader("Cache-Control", "private, max-age=31536000, immutable")
+      .status(200)
+      .send(file);
+  }
+
+  // Lazy generation for missing previews
+  if (isPreview) {
+    const link = await prisma.link.findUnique({ where: { id: linkId } });
+    if (link && link.preview !== "unavailable") {
+      const generated = await generatePreviewOnDemand(link, collection.id);
+      if (generated) {
+        const result = await readFile(
+          `archives/preview/${collection.id}/${linkId}.jpeg`
+        );
+        if (result.status === 200) {
+          return res
+            .setHeader("Content-Type", "image/jpeg")
+            .setHeader("Cache-Control", "private, max-age=31536000, immutable")
+            .status(200)
+            .send(result.file);
+        }
+      }
+      await prisma.link.update({
+        where: { id: linkId },
+        data: { preview: "unavailable" },
+      });
+    }
+  }
+
+  return res
     .setHeader("Content-Type", contentType)
     .setHeader("Cache-Control", "private, max-age=31536000, immutable")
-    .status(status as number);
-  return res.send(file);
+    .status(status as number)
+    .send(file);
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {

@@ -3,8 +3,8 @@ import {
   CollectionIncludingMembersAndLinkCount,
   LinkIncludingShortenedCollectionAndTags,
   ViewMode,
-} from "@linkwarden/types/global";
-import { useEffect, useState } from "react";
+} from "@linkwarden/types";
+import { useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import LinkMasonry from "@/components/LinkViews/LinkComponents/LinkMasonry";
 import Masonry from "react-masonry-css";
@@ -61,10 +61,10 @@ function CardView({
 
   const getColumnCount = () => {
     const width = window.innerWidth;
-    if (width >= 1501) return 5;
-    if (width >= 881) return 4;
-    if (width >= 701) return 3;
-    if (width >= 501) return 2;
+    if (width >= 1901) return 5;
+    if (width >= 1501) return 4;
+    if (width >= 881) return 3;
+    if (width >= 551) return 2;
     return 1;
   };
 
@@ -116,7 +116,7 @@ function CardView({
   }, [settings.columns]);
 
   return (
-    <div className={`${gridColClass} grid gap-3 pb-3`}>
+    <div className={`${gridColClass} grid gap-5 pb-5`}>
       {links?.map((e) => {
         const collection = collectionsById.get(e.collection.id as number);
         const selected = isSelected(e.id as number);
@@ -193,10 +193,10 @@ function MasonryView({
 
   const getColumnCount = () => {
     const width = window.innerWidth;
-    if (width >= 1501) return 5;
-    if (width >= 881) return 4;
-    if (width >= 701) return 3;
-    if (width >= 501) return 2;
+    if (width >= 1901) return 5;
+    if (width >= 1501) return 4;
+    if (width >= 881) return 3;
+    if (width >= 551) return 2;
     return 1;
   };
 
@@ -247,15 +247,15 @@ function MasonryView({
     };
   }, [settings.columns]);
 
-  const breakpointColumnsObj = { default: 5, 1500: 4, 881: 3, 700: 2, 500: 1 };
+  const breakpointColumnsObj = { default: 5, 1900: 4, 1500: 3, 880: 2, 550: 1 };
 
   return (
     <Masonry
       breakpointCols={
         settings.columns === 0 ? breakpointColumnsObj : columnCount
       }
-      columnClassName="flex flex-col gap-3 !w-full"
-      className={`${gridColClass} grid gap-3 pb-3`}
+      columnClassName="flex flex-col gap-5 !w-full"
+      className={`${gridColClass} grid gap-5 pb-5`}
     >
       {links?.map((e) => {
         const collection = collectionsById.get(e.collection.id as number);
@@ -402,27 +402,39 @@ export default function Links({
     }
   }, [editMode]);
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-
-    if (
+  const hasPendingPreviews = useMemo(
+    () =>
       links?.some(
-        (e) => !e.preview?.startsWith("archives") && e.preview !== "unavailable"
-      )
-    ) {
-      interval = setInterval(async () => {
-        useData.refetch().catch((error: any) => {
-          console.error("Error refetching link:", error);
-        });
-      }, 5000);
+        (e) =>
+          !e.preview?.startsWith("archives") && e.preview !== "unavailable"
+      ) ?? false,
+    [links]
+  );
+
+  const pollCountRef = useRef(0);
+
+  useEffect(() => {
+    if (!hasPendingPreviews) {
+      pollCountRef.current = 0;
+      return;
     }
 
-    return () => {
-      if (interval) {
+    const MAX_POLLS = 60;
+    if (pollCountRef.current >= MAX_POLLS) return;
+
+    const interval = setInterval(() => {
+      pollCountRef.current++;
+      if (pollCountRef.current >= MAX_POLLS) {
         clearInterval(interval);
+        return;
       }
-    };
-  }, [links]);
+      useData?.refetch().catch((error: any) => {
+        console.error("Error refetching links:", error);
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [hasPendingPreviews]);
 
   const disableDraggable = useMediaQuery("(max-width: 1023px)");
 

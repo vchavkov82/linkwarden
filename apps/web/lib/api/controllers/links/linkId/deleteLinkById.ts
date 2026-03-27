@@ -25,9 +25,11 @@ export default async function deleteLink(userId: number, linkId: number) {
     },
   });
 
-  removeFiles(linkId, collectionIsAccessible.id);
+  await removeFiles(linkId, collectionIsAccessible.id);
 
-  await meiliClient?.index("links").deleteDocument(deleteLink.id);
+  await meiliClient?.index("links").deleteDocument(deleteLink.id).catch((err) =>
+    console.error("Failed to remove link from search index:", err)
+  );
 
   return { response: deleteLink, status: 200 };
 }

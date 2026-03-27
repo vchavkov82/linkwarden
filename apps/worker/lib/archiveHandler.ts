@@ -6,7 +6,6 @@ import fetchHeaders from "./fetchHeaders";
 import { createFolder, readFile, removeFiles } from "@linkwarden/filesystem";
 import handleMonolith from "./preservationScheme/handleMonolith";
 import handleReadability from "./preservationScheme/handleReadability";
-import handleArchivePreview from "./preservationScheme/handleArchivePreview";
 import handleScreenshotAndPdf from "./preservationScheme/handleScreenshotAndPdf";
 import imageHandler from "./preservationScheme/imageHandler";
 import pdfHandler from "./preservationScheme/pdfHandler";
@@ -54,7 +53,6 @@ export default async function archiveHandler(
         image: "unavailable",
         monolith: "unavailable",
         pdf: "unavailable",
-        preview: "unavailable",
 
         // To prevent re-archiving the same link
         aiTagged:
@@ -93,7 +91,6 @@ export default async function archiveHandler(
   await protectPageRequests(context);
   const page = await context.newPage();
 
-  createFolder({ filePath: `archives/preview/${link.collectionId}` });
   createFolder({ filePath: `archives/${link.collectionId}` });
 
   const archivalTags = link.tags.filter(isArchivalTag);
@@ -179,9 +176,6 @@ export default async function archiveHandler(
 
           const content = await page.content();
 
-          // Preview
-          if (!link.preview) await handleArchivePreview(link, page);
-
           // Readability
           if (archivalSettings.archiveAsReadable && !link.readable)
             await handleReadability(content, link);
@@ -247,7 +241,6 @@ export default async function archiveHandler(
           image: !finalLink.image ? "unavailable" : undefined,
           monolith: !finalLink.monolith ? "unavailable" : undefined,
           pdf: !finalLink.pdf ? "unavailable" : undefined,
-          preview: !finalLink.preview ? "unavailable" : undefined,
           aiTagged:
             user.aiTaggingMethod !== AiTaggingMethod.DISABLED &&
             !finalLink.aiTagged

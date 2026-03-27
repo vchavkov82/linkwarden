@@ -1,6 +1,5 @@
 import { prisma } from "@linkwarden/prisma";
 import { UsersAndCollections } from "@linkwarden/prisma/client";
-import getPermission from "@/lib/api/getPermission";
 import { removeFiles } from "@linkwarden/filesystem";
 import { meiliClient } from "@linkwarden/lib/meilisearchClient";
 
@@ -12,39 +11,36 @@ export default async function deleteLinksById(
     return { response: "Please choose valid links.", status: 401 };
   }
 
-  const collectionIsAccessibleArray = [];
-
-  // Check if the user has access to the collection of each link
-  // if any of the links are not accessible, return an error
-  // if all links are accessible, continue with the deletion
-  // and add the collection to the collectionIsAccessibleArray
-  for (const linkId of linkIds) {
-    const collectionIsAccessible = await getPermission({ userId, linkId });
-
-    const memberHasAccess = collectionIsAccessible?.members.some(
-      (e: UsersAndCollections) => e.userId === userId && e.canDelete
-    );
-
-    if (!(collectionIsAccessible?.ownerId === userId || memberHasAccess)) {
-      return { response: "Collection is not accessible.", status: 401 };
-    }
-
-    collectionIsAccessibleArray.push(collectionIsAccessible);
-  }
-
-  const deletedLinks = await prisma.link.deleteMany({
-    where: {
-      id: { in: linkIds },
+  const links = await prisma.link.findMany({
+    where: { id: { in: linkIds } },
+    select: {
+      id: true,
+      collectionId: true,
+      collection: {
+        select: {
+          id: true,
+          ownerId: true,
+          members: true,
+        },
+      },
     },
   });
 
-  // Loop through each link and delete the associated files
-  // if the user has access to the collection
-  for (let i = 0; i < linkIds.length; i++) {
-    const linkId = linkIds[i];
-    const collectionIsAccessible = collectionIsAccessibleArray[i];
+  for (const link of links) {
+    const memberHasAccess = link.collection.members.some(
+      (e: UsersAndCollections) => e.userId === userId && e.canDelete
+    );
+    if (!(link.collection.ownerId === userId || memberHasAccess)) {
+      return { response: "Collection is not accessible.", status: 401 };
+    }
+  }
 
-    if (collectionIsAccessible) removeFiles(linkId, collectionIsAccessible.id);
+  const deletedLinks = await prisma.link.deleteMany({
+    where: { id: { in: linkIds } },
+  });
+
+  for (const link of links) {
+    await removeFiles(link.id, link.collectionId);
   }
 
   await meiliClient?.index("links").deleteDocuments(linkIds);

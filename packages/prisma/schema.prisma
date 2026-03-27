@@ -198,8 +198,12 @@ model Link {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @default(now()) @updatedAt
 
+  @@unique([url, ownerId])
   @@index([collectionId])
-  @@index([url, ownerId])
+  @@index([createdById])
+  @@index([ownerId])
+  @@index([indexVersion])
+  @@index([lastPreserved])
 }
 
 model Tag {
