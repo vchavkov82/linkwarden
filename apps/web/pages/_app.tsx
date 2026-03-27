@@ -1,4 +1,5 @@
 import React, { ReactElement, ReactNode, useEffect } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "@/styles/globals.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { SessionProvider } from "next-auth/react";
@@ -106,7 +107,9 @@ function App({ Component, pageProps }: AppPropsWithLayout) {
               </ToastBar>
             )}
           </Toaster>
-          {getLayout(<Component {...pageProps} />)}
+          <ErrorBoundary>
+            {getLayout(<Component {...pageProps} />)}
+          </ErrorBoundary>
           {/* </GetData> */}
         </AuthRedirect>
       </SessionProvider>

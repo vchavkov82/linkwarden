@@ -252,6 +252,8 @@ model AccessToken {
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @default(now()) @updatedAt
+
+  @@index([userId])
 }
 
 model RssSubscription {
@@ -264,6 +266,9 @@ model RssSubscription {
   ownerId       Int
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @default(now()) @updatedAt
+
+  @@index([collectionId])
+  @@index([ownerId])
 }
 
 model Highlight {
@@ -279,6 +284,9 @@ model Highlight {
   text        String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([linkId])
+  @@index([userId])
 }
 
 model DashboardSection {
@@ -293,6 +301,8 @@ model DashboardSection {
   updatedAt    DateTime             @default(now()) @updatedAt
 
   @@unique([userId, collectionId])
+  @@index([userId])
+  @@index([collectionId])
 }
 
 enum DashboardSectionType {

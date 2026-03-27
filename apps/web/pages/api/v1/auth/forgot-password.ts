@@ -48,16 +48,13 @@ export default async function forgotPassword(
       },
     });
 
-    if (!user || !user.email) {
-      return res.status(400).json({
-        response: "No user found with that email.",
-      });
+    if (user?.email) {
+      sendPasswordResetRequest(user.email, user.name || "Linkwarden User");
     }
 
-    sendPasswordResetRequest(user.email, user.name || "Linkwarden User");
-
     return res.status(200).json({
-      response: "Password reset email sent.",
+      response:
+        "If an account with this email exists, a password reset link has been sent.",
     });
   }
 }

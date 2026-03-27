@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import DOMPurify from "dompurify";
 import clsx from "clsx";
 import { PreservationSkeleton } from "../Skeletons";
 import { useTranslation } from "next-i18next";
@@ -470,7 +471,9 @@ export default function ReadableView({ link }: Props) {
               <div
                 id="readable-view"
                 className="line-break px-1 reader-view read-only"
-                dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(highlightedHtml),
+                }}
               />
 
               {menuOpen &&

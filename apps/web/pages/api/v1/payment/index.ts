@@ -14,8 +14,6 @@ export default async function users(req: NextApiRequest, res: NextApiResponse) {
   if (!STRIPE_SECRET_KEY || !MONTHLY_PRICE_ID || !YEARLY_PRICE_ID)
     return res.status(400).json({ response: "Payment is disabled." });
 
-  console.log(token);
-
   if (!token?.id) return res.status(404).json({ response: "Token invalid." });
 
   const email = (await prisma.user.findUnique({ where: { id: token.id } }))

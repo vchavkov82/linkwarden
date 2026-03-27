@@ -65,10 +65,13 @@ export default async function updateLinkById(
     return { response: updatedLink, status: 200 };
   }
 
-  const targetCollectionIsAccessible = await getPermission({
-    userId,
-    collectionId: data.collection.id,
-  });
+  const targetCollectionIsAccessible =
+    collectionIsAccessible?.id === data.collection.id
+      ? collectionIsAccessible
+      : await getPermission({
+          userId,
+          collectionId: data.collection.id,
+        });
 
   const memberHasAccess = collectionIsAccessible?.members.some(
     (e: UsersAndCollections) => e.userId === userId && e.canUpdate

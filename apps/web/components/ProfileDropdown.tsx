@@ -45,9 +45,10 @@ export default function ProfileDropdown() {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <div
+          <button
+            type="button"
             onClick={() => handleToggle()}
-            className="whitespace-nowrap block sm:hidden"
+            className="whitespace-nowrap block sm:hidden w-full"
           >
             {user?.theme === "light" ? (
               <i className="bi-moon-fill"></i>
@@ -57,7 +58,7 @@ export default function ProfileDropdown() {
             {t("switch_to", {
               theme: user?.theme === "light" ? t("dark") : t("light"),
             })}
-          </div>
+          </button>
         </DropdownMenuItem>
 
         {isAdmin && (
@@ -74,10 +75,14 @@ export default function ProfileDropdown() {
         )}
 
         <DropdownMenuItem asChild>
-          <div onClick={() => signOut()} className="whitespace-nowrap">
+          <button
+            type="button"
+            onClick={() => signOut()}
+            className="whitespace-nowrap w-full"
+          >
             <i className="bi-box-arrow-left" />
             {t("logout")}
-          </div>
+          </button>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

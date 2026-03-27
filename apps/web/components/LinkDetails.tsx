@@ -38,12 +38,22 @@ import {
 } from "@/components/ui/tooltip";
 import { Separator } from "./ui/separator";
 
+type CollectionOwner = {
+  id: number | null;
+  name: string;
+  username: string;
+  image: string;
+  archiveAsScreenshot: boolean | undefined;
+  archiveAsMonolith: boolean | undefined;
+  archiveAsPDF: boolean | undefined;
+};
+
 type Props = {
   className?: string;
   activeLink: LinkIncludingShortenedCollectionAndTags;
   standalone?: boolean;
   mode?: "view" | "edit";
-  setMode?: Function;
+  setMode?: (mode: "view" | "edit") => void;
   onUpdateArchive?: () => void;
 };
 
@@ -68,16 +78,16 @@ export default function LinkDetails({
   const { data: user } = useUser();
   const router = useRouter();
 
-  const isPublicRoute = router.pathname.startsWith("/public") ? true : false;
+  const isPublicRoute = router.pathname.startsWith("/public");
 
-  const [collectionOwner, setCollectionOwner] = useState({
-    id: null as unknown as number,
+  const [collectionOwner, setCollectionOwner] = useState<CollectionOwner>({
+    id: null,
     name: "",
     username: "",
     image: "",
-    archiveAsScreenshot: undefined as unknown as boolean,
-    archiveAsMonolith: undefined as unknown as boolean,
-    archiveAsPDF: undefined as unknown as boolean,
+    archiveAsScreenshot: undefined,
+    archiveAsMonolith: undefined,
+    archiveAsPDF: undefined,
   });
 
   useEffect(() => {

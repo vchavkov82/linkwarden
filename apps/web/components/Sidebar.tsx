@@ -1,4 +1,5 @@
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Disclosure, Transition } from "@headlessui/react";
 import SidebarHighlightLink from "@/components/SidebarHighlightLink";
@@ -17,8 +18,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { TagSort } from "@linkwarden/types/global";
-import { useInView } from "react-intersection-observer";
 
 export default function Sidebar({
   className,
@@ -30,7 +29,6 @@ export default function Sidebar({
   sidebarIsCollapsed?: boolean;
 }) {
   const { t } = useTranslation();
-  const { ref, inView } = useInView();
   const [tagDisclosure, setTagDisclosure] = useState<boolean>(() => {
     const storedValue = localStorage.getItem("tagDisclosure");
     return storedValue ? storedValue === "true" : true;
@@ -45,15 +43,7 @@ export default function Sidebar({
 
   const { data: collections } = useCollections();
 
-  const {
-    data: tags = [],
-    isLoading,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  } = useTags(undefined, {
-    sort: TagSort.NameAZ,
-  });
+  const { data: tags = [], isLoading } = useTags();
   const [active, setActive] = useState("");
 
   const router = useRouter();
@@ -75,14 +65,6 @@ export default function Sidebar({
     setActive(router.asPath);
   }, [router, collections]);
 
-  useEffect(() => {
-    if (!inView) return;
-    if (!hasNextPage) return;
-    if (isFetchingNextPage) return;
-
-    fetchNextPage();
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
   return (
     <div
       id="sidebar"
@@ -100,38 +82,37 @@ export default function Sidebar({
             : "gap-1"
         )}
       >
-        <div className="flex items-center justify-between mb-3">
-          {sidebarIsCollapsed ? (
-            <Image
-              src={"/icon.png"}
-              width={640}
-              height={136}
-              alt="Linkwarden Icon"
-              className="h-8 w-auto cursor-pointer"
-              onClick={() => router.push("/dashboard")}
-              priority
-            />
-          ) : user?.theme === "light" ? (
-            <Image
-              src={"/linkwarden_light.png"}
-              width={640}
-              height={136}
-              alt="Linkwarden"
-              className="h-9 w-auto cursor-pointer"
-              onClick={() => router.push("/dashboard")}
-              priority
-            />
-          ) : (
-            <Image
-              src={"/linkwarden_dark.png"}
-              width={640}
-              height={136}
-              alt="Linkwarden"
-              className="h-9 w-auto cursor-pointer"
-              onClick={() => router.push("/dashboard")}
-              priority
-            />
-          )}
+        <div className="flex items-center justify-between mb-4">
+          <Link href="/dashboard" aria-label="Go to dashboard">
+            {sidebarIsCollapsed ? (
+              <Image
+                src={"/icon.png"}
+                width={640}
+                height={136}
+                alt="Linkwarden Icon"
+                className="h-8 w-auto cursor-pointer"
+                priority
+              />
+            ) : user?.theme === "light" ? (
+              <Image
+                src={"/linkwarden_light.png"}
+                width={640}
+                height={136}
+                alt="Linkwarden"
+                className="h-9 w-auto cursor-pointer"
+                priority
+              />
+            ) : (
+              <Image
+                src={"/linkwarden_dark.png"}
+                width={640}
+                height={136}
+                alt="Linkwarden"
+                className="h-9 w-auto cursor-pointer"
+                priority
+              />
+            )}
+          </Link>
 
           {!sidebarIsCollapsed && (
             <div className="hidden lg:block">
@@ -225,7 +206,7 @@ export default function Sidebar({
               onClick={() => {
                 setCollectionDisclosure(!collectionDisclosure);
               }}
-              className="flex items-center justify-between w-full text-left mb-2 pl-2 font-bold text-neutral mt-4"
+              className="flex items-center justify-between w-full text-left mb-2 pl-2 font-bold text-neutral mt-5"
             >
               <p className="text-sm">{t("collections")}</p>
               <i
@@ -252,7 +233,7 @@ export default function Sidebar({
               onClick={() => {
                 setTagDisclosure(!tagDisclosure);
               }}
-              className="flex items-center justify-between w-full text-left mb-2 pl-2 font-bold text-neutral mt-4"
+              className="flex items-center justify-between w-full text-left mb-2 pl-2 font-bold text-neutral mt-5"
             >
               <p className="text-sm">{t("tags")}</p>
               <i
@@ -277,17 +258,7 @@ export default function Sidebar({
                     <div className="skeleton h-4 w-full"></div>
                   </div>
                 ) : (
-                  <>
-                    <TagListing tags={tags} active={active} />
-                    {hasNextPage && <div ref={ref} className="h-1 w-full" />}
-                    {isFetchingNextPage && (
-                      <div className="flex flex-col gap-4 mt-3">
-                        <div className="skeleton h-4 w-full"></div>
-                        <div className="skeleton h-4 w-full"></div>
-                        <div className="skeleton h-4 w-full"></div>
-                      </div>
-                    )}
-                  </>
+                  <TagListing tags={tags} active={active} />
                 )}
               </Disclosure.Panel>
             </Transition>

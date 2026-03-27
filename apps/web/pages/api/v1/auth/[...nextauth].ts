@@ -88,7 +88,6 @@ if (process.env.NEXT_PUBLIC_CREDENTIALS_ENABLED !== "false") {
       type: "credentials",
       credentials: {},
       async authorize(credentials, req) {
-        console.log("User log in attempt...");
         if (!credentials) return null;
 
         const { username, password } = credentials as {

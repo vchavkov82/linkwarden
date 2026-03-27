@@ -35,7 +35,14 @@ function LinkIcon({
   }, [link.url]);
 
   return (
-    <div onClick={() => onClick && onClick()}>
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={() => onClick && onClick()}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) onClick();
+      }}
+    >
       {link.icon ? (
         <div className={iconClasses}>
           <Icon

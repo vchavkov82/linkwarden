@@ -19,6 +19,7 @@ export default async function getPermission({
             id: linkId,
           },
         },
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
       },
       include: { members: true },
     });

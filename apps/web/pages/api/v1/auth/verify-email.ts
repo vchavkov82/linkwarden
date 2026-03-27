@@ -71,8 +71,6 @@ export default async function verifyEmail(
       },
     });
 
-    console.log(emailInUse);
-
     if (emailInUse) {
       return res.status(400).json({
         response: "Email is already in use.",

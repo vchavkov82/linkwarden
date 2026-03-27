@@ -103,53 +103,56 @@ export default async function deleteCollection(
   return { response: deletedCollection, status: 200 };
 }
 
+async function getAllDescendantIds(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  collectionId: number
+): Promise<number[]> {
+  const children = await tx.collection.findMany({
+    where: { parentId: collectionId },
+    select: { id: true },
+  });
+  const childIds = children.map((c) => c.id);
+  const nestedIds = await Promise.all(
+    childIds.map((id) => getAllDescendantIds(tx, id))
+  );
+  return [...childIds, ...nestedIds.flat()];
+}
+
 async function deleteSubCollections(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   collectionId: number
 ) {
-  const subCollections = await tx.collection.findMany({
-    where: { parentId: collectionId },
+  const descendantIds = await getAllDescendantIds(tx, collectionId);
+  if (descendantIds.length === 0) return;
+
+  await tx.usersAndCollections.deleteMany({
+    where: { collectionId: { in: descendantIds } },
   });
 
-  for (const subCollection of subCollections) {
-    await deleteSubCollections(tx, subCollection.id);
+  const links = await tx.link.findMany({
+    where: { collectionId: { in: descendantIds } },
+    select: { id: true },
+  });
+  const linkIds = links.map((link) => link.id);
 
-    await tx.usersAndCollections.deleteMany({
-      where: {
-        collection: {
-          id: subCollection.id,
-        },
-      },
-    });
-
-    const links = await tx.link.findMany({
-      where: {
-        collectionId: subCollection.id,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    const linkIds = links.map((link) => link.id);
-
+  if (linkIds.length > 0) {
     await meiliClient?.index("links").deleteDocuments(linkIds);
-
-    await tx.link.deleteMany({
-      where: {
-        collection: {
-          id: subCollection.id,
-        },
-      },
-    });
-
-    await tx.collection.delete({
-      where: { id: subCollection.id },
-    });
-
-    await removeFolder({ filePath: `archives/${subCollection.id}` });
-    await removeFolder({ filePath: `archives/preview/${subCollection.id}` });
   }
+
+  await tx.link.deleteMany({
+    where: { collectionId: { in: descendantIds } },
+  });
+
+  await tx.collection.deleteMany({
+    where: { id: { in: descendantIds } },
+  });
+
+  await Promise.all(
+    descendantIds.flatMap((id) => [
+      removeFolder({ filePath: `archives/${id}` }),
+      removeFolder({ filePath: `archives/preview/${id}` }),
+    ])
+  );
 }
 
 async function removeFromOrders(userId: number, collectionId: number) {

@@ -4,13 +4,14 @@ import {
   LinkIncludingShortenedCollectionAndTags,
   ViewMode,
 } from "@linkwarden/types";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useInView } from "react-intersection-observer";
 import LinkMasonry from "@/components/LinkViews/LinkComponents/LinkMasonry";
 import Masonry from "react-masonry-css";
 import { useMemo } from "react";
 import LinkList from "@/components/LinkViews/LinkComponents/LinkList";
 import useLocalSettingsStore from "@/store/localSettings";
+import { useResponsiveGrid } from "@/hooks/useResponsiveGrid";
 import { useCollections } from "@linkwarden/router/collections";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
@@ -46,74 +47,7 @@ function CardView({
   hasNextPage: boolean;
   placeHolderRef: any;
 }) {
-  const settings = useLocalSettingsStore((state) => state.settings);
-
-  const gridMap = {
-    1: "grid-cols-1",
-    2: "grid-cols-2",
-    3: "grid-cols-3",
-    4: "grid-cols-4",
-    5: "grid-cols-5",
-    6: "grid-cols-6",
-    7: "grid-cols-7",
-    8: "grid-cols-8",
-  };
-
-  const getColumnCount = () => {
-    const width = window.innerWidth;
-    if (width >= 1901) return 5;
-    if (width >= 1501) return 4;
-    if (width >= 881) return 3;
-    if (width >= 551) return 2;
-    return 1;
-  };
-
-  const [columnCount, setColumnCount] = useState(
-    settings.columns || getColumnCount()
-  );
-
-  const gridColClass = useMemo(
-    () => gridMap[columnCount as keyof typeof gridMap],
-    [columnCount]
-  );
-
-  const heightMap = {
-    1: "h-44",
-    2: "h-40",
-    3: "h-36",
-    4: "h-32",
-    5: "h-28",
-    6: "h-24",
-    7: "h-20",
-    8: "h-20",
-  };
-
-  const imageHeightClass = useMemo(
-    () =>
-      columnCount ? heightMap[columnCount as keyof typeof heightMap] : "h-40",
-    [columnCount]
-  );
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (settings.columns === 0) {
-        // Only recalculate if zustandColumns is zero
-        setColumnCount(getColumnCount());
-      }
-    };
-
-    if (settings.columns === 0) {
-      window.addEventListener("resize", handleResize);
-    }
-
-    setColumnCount(settings.columns || getColumnCount());
-
-    return () => {
-      if (settings.columns === 0) {
-        window.removeEventListener("resize", handleResize);
-      }
-    };
-  }, [settings.columns]);
+  const { gridColClass, imageHeightClass } = useResponsiveGrid();
 
   return (
     <div className={`${gridColClass} grid gap-5 pb-5`}>
@@ -179,73 +113,7 @@ function MasonryView({
   placeHolderRef: any;
 }) {
   const settings = useLocalSettingsStore((state) => state.settings);
-
-  const gridMap = {
-    1: "grid-cols-1",
-    2: "grid-cols-2",
-    3: "grid-cols-3",
-    4: "grid-cols-4",
-    5: "grid-cols-5",
-    6: "grid-cols-6",
-    7: "grid-cols-7",
-    8: "grid-cols-8",
-  };
-
-  const getColumnCount = () => {
-    const width = window.innerWidth;
-    if (width >= 1901) return 5;
-    if (width >= 1501) return 4;
-    if (width >= 881) return 3;
-    if (width >= 551) return 2;
-    return 1;
-  };
-
-  const [columnCount, setColumnCount] = useState(
-    settings.columns || getColumnCount()
-  );
-
-  const gridColClass = useMemo(
-    () => gridMap[columnCount as keyof typeof gridMap],
-    [columnCount]
-  );
-
-  const heightMap = {
-    1: "h-44",
-    2: "h-40",
-    3: "h-36",
-    4: "h-32",
-    5: "h-28",
-    6: "h-24",
-    7: "h-20",
-    8: "h-20",
-  };
-
-  const imageHeightClass = useMemo(
-    () =>
-      columnCount ? heightMap[columnCount as keyof typeof heightMap] : "h-40",
-    [columnCount]
-  );
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (settings.columns === 0) {
-        // Only recalculate if zustandColumns is zero
-        setColumnCount(getColumnCount());
-      }
-    };
-
-    if (settings.columns === 0) {
-      window.addEventListener("resize", handleResize);
-    }
-
-    setColumnCount(settings.columns || getColumnCount());
-
-    return () => {
-      if (settings.columns === 0) {
-        window.removeEventListener("resize", handleResize);
-      }
-    };
-  }, [settings.columns]);
+  const { columnCount, gridColClass, imageHeightClass } = useResponsiveGrid();
 
   const breakpointColumnsObj = { default: 5, 1900: 4, 1500: 3, 880: 2, 550: 1 };
 

@@ -29,6 +29,7 @@ export default async function bulkTagDelete(
       where: {
         tags: {
           some: {
+            id: { in: tagIds },
             ownerId: userId,
           },
         },
