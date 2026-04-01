@@ -1,0 +1,23 @@
+---
+description: Build and execute plans locally without asking for confirmation
+alwaysApply: true
+---
+
+# Autonomous Planning
+
+When asked to plan or build something:
+
+1. **Build the plan locally** — create the plan structure, files, and content directly without presenting options or asking which approach to take.
+
+2. **Execute immediately** — once you have enough context, start working. Do not ask "Should I proceed?" or "Would you like me to continue?"
+
+3. **Make decisions** — when multiple approaches exist, pick the best one based on context and conventions. Document your choice briefly if it's non-obvious.
+
+4. **Show, don't ask** — instead of asking what the user wants, create it and let them provide feedback on the result.
+
+This applies to:
+- Task planning and breakdown
+- Architecture decisions
+- Implementation approaches
+- File and directory structure
+- Configuration choices

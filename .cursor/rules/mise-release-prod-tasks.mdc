@@ -1,0 +1,117 @@
+---
+description: Require mise run release and mise run prod tasks in every project
+alwaysApply: true
+---
+
+# Mise Release and Prod Tasks
+
+Every project MUST have these two tasks in `.mise.toml`:
+
+## Environment variables
+
+Every project MUST define these env vars in `.mise.toml` `[env]`:
+
+```toml
+[env]
+REGISTRY = "docker.svc.assistance.bg:5000"
+IMAGE_PREFIX = "docker.svc.assistance.bg:5000/assistance/<project>"
+```
+
+The image naming convention is `assistance/<project>/<service>` — e.g. `assistance/jobs/api`, `assistance/hr/web`.
+
+## `mise run release`
+
+Full release: verify, build, push images to registry, git tag, push. This task:
+- Reads version from `package.json` (`"version"` field) — always, no manual VERSION arg needed
+- Always overwrites an existing git tag with the same version (delete local + remote, recreate)
+- Runs quality checks and builds before tagging
+- Builds Docker images tagged as both `latest` and the version (e.g. `v1.2.0`)
+- Pushes all images to `docker.svc.assistance.bg:5000/assistance/<project>/`
+- Pushes commits and tag to origin with `--force` (to update moved tags)
+- No `--force` flag needed from the user — overwrite is the default behavior
+
+```toml
+[tasks.release]
+description = "Release: verify → build → push images → tag → push"
+run = """
+VERSION="v$(jq -r .version package.json)"
+echo "=== Release $VERSION ==="
+
+# Remove existing tag (always overwrite)
+if git rev-parse "$VERSION" >/dev/null 2>&1; then
+  git tag -d "$VERSION"
+  git push origin ":refs/tags/$VERSION" 2>/dev/null || true
+fi
+
+# Clean working tree required
+[ -z "$(git status --porcelain)" ] || { echo "ERROR: Working tree not clean"; exit 1; }
+
+# Quality + build
+mise run verify || exit 1
+mise run build-all || exit 1
+
+# Tag and push Docker images
+for IMG in api web admin; do
+  podman tag "$IMAGE_PREFIX/$IMG:latest" "$IMAGE_PREFIX/$IMG:$VERSION"
+  podman push "$IMAGE_PREFIX/$IMG:latest" || exit 1
+  podman push "$IMAGE_PREFIX/$IMG:$VERSION" || exit 1
+done
+
+# Git tag and push
+git tag -a "$VERSION" -m "Release $VERSION"
+git push origin HEAD --follow-tags --force || exit 1
+echo "Release $VERSION complete!"
+"""
+```
+
+A `release-quick` variant may skip verify (lint/test) for hotfixes.
+
+**Version management**: Bump `version` in `package.json` before running `mise run release`. The task reads it automatically and overwrites any existing tag with that version.
+
+## `mise run prod`
+
+Deploys to production using images from the registry. This task:
+- Pulls images from `docker.svc.assistance.bg:5000/assistance/<project>/`
+- Starts `podman-compose.prod.yml` stack
+- May include backup, migration, and health check steps
+- Project-specific — adapt to the project's deployment model
+
+```toml
+[tasks.prod]
+description = "Production deploy: pull images → start stack"
+run = "..."
+```
+
+`podman-compose.prod.yml` MUST reference images with the full registry path:
+```yaml
+services:
+  api:
+    image: docker.svc.assistance.bg:5000/assistance/<project>/api:latest
+```
+
+## Image naming convention
+
+```
+docker.svc.assistance.bg:5000/assistance/<project>/<service>:<tag>
+```
+
+Examples:
+- `docker.svc.assistance.bg:5000/assistance/jobs/api:latest`
+- `docker.svc.assistance.bg:5000/assistance/jobs/web:v1.2.0`
+- `docker.svc.assistance.bg:5000/assistance/hr/api:latest`
+
+Tags: `latest` (always pushed) + version from `package.json` (e.g. `v1.2.0`).
+
+## Relationship
+
+```
+mise run release  →  verify + build + push images to registry + git tag + push
+mise run prod     →  pull images from registry + deploy containers
+```
+
+`release` publishes both code (git tag) and artifacts (Docker images). `prod` consumes the published images.
+
+Typical workflow:
+1. Bump `version` in `package.json`
+2. `mise run release` — build, push images, tag, push
+3. `mise run prod` — deploy (can happen on a different host)

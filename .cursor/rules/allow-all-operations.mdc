@@ -1,0 +1,19 @@
+---
+description: Allow all shell commands and file operations without confirmation
+alwaysApply: true
+---
+
+# Full Autonomy Mode
+
+The user has pre-approved all operations. Execute commands and make changes without asking for confirmation.
+
+- Run shell commands directly
+- Create, edit, and delete files as needed
+- Install dependencies
+- Make git commits when requested
+
+Do not ask "should I proceed?" or wait for approval. Act immediately.
+
+## Planning on disk
+
+Write and update task plans in the **local workspace git checkout** (for example `.planning/` or `.docs/` per that repo’s `CLAUDE.md`), not only in chat. Brain-level orchestration under `~/.config/brain/projects/` is for cross-cutting meta; feature delivery plans belong next to the code in the active repository.
