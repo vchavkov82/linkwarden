@@ -1,0 +1,326 @@
+---
+description: "Use Azure DevOps MCP Server for work items, repositories, pull requests, pipelines, wikis, test plans, and search. Use when working with Azure DevOps organizations, sprints, backlogs, code reviews, CI/CD builds, or project management. Also for WIQL queries, team capacity, and iteration planning."
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Azure DevOps MCP Server
+
+Use the Azure DevOps MCP Server (@azure-devops/mcp) to interact with Azure DevOps via natural language. Version: 2.5.0.
+
+## Quick Start
+
+### Local Server (Recommended)
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "npx",
+      "args": ["-y", "@azure-devops/mcp@2.5.0", "YOUR_ORG_NAME"]
+    }
+  }
+}
+```
+
+### Remote Server (Preview)
+```json
+{
+  "servers": {
+    "ado-remote": {
+      "url": "https://mcp.dev.azure.com/{organization}",
+      "type": "http"
+    }
+  }
+}
+```
+
+## Authentication
+
+**Local server**: Uses Azure CLI credentials or PAT
+```bash
+az login
+# OR set environment variable
+export ADO_MCP_AUTH_TOKEN="your-personal-access-token"
+```
+
+**Remote server**: Uses Microsoft Entra ID (OAuth)
+
+## Available Toolsets
+
+| Toolset | Tools Prefix | Description |
+|---------|--------------|-------------|
+| `repos` | `repo_*` | Repositories, branches, pull requests |
+| `wit` | `wit_*` | Work items, backlogs, queries |
+| `pipelines` | `pipelines_*` | Builds, runs, artifacts |
+| `wiki` | `wiki_*` | Wiki pages, content |
+| `work` | `work_*` | Iterations, team capacity |
+| `testplan` | `testplan_*` | Test plans, suites, cases |
+| `search` | `search_*` | Code, wiki, work item search |
+
+### Filter by Toolset
+```json
+{
+  "args": ["-y", "@azure-devops/mcp@2.5.0", "MY_ORG", "-d", "repos,wit,pipelines"]
+}
+```
+
+Or via headers (remote):
+```json
+{
+  "headers": {
+    "X-MCP-Toolsets": "repos,wiki,wit"
+  }
+}
+```
+
+## Work Items (WIT)
+
+### Read Operations
+| Tool | Description |
+|------|-------------|
+| `wit_get_work_item` | Get work item by ID |
+| `wit_get_work_items_batch_by_ids` | Get multiple work items |
+| `wit_my_work_items` | Get items assigned to me |
+| `wit_list_backlogs` | List team backlogs |
+| `wit_list_backlog_work_items` | List items in backlog |
+| `wit_get_work_items_for_iteration` | Items in iteration/sprint |
+| `wit_list_work_item_comments` | List comments |
+| `wit_list_work_item_revisions` | List revisions |
+| `wit_get_query` | Get saved query |
+| `wit_get_query_results_by_id` | Run saved query |
+| `search_workitem` | Full-text search |
+
+### Write Operations
+| Tool | Description |
+|------|-------------|
+| `wit_create_work_item` | Create work item |
+| `wit_update_work_item` | Update work item |
+| `wit_update_work_items_batch` | Batch update |
+| `wit_add_work_item_comment` | Add comment |
+| `wit_work_items_link` | Link work items |
+| `wit_work_item_unlink` | Remove links |
+| `wit_add_child_work_items` | Create child items |
+| `wit_link_work_item_to_pull_request` | Link to PR |
+
+### Example Prompts
+```
+Get my work items for project MyProject
+Show work items in the current sprint
+Search work items containing "authentication bug"
+Create a bug titled "Login fails on mobile"
+Update work item #123 to set state to Active
+Link work item #456 to PR #789
+```
+
+## Repositories (Repos)
+
+### Read Operations
+| Tool | Description |
+|------|-------------|
+| `repo_list_repos_by_project` | List repositories |
+| `repo_get_repo_by_name_or_id` | Get repo details |
+| `repo_list_branches_by_repo` | List branches |
+| `repo_get_branch_by_name` | Get branch details |
+| `repo_list_my_branches_by_repo` | My branches |
+| `repo_search_commits` | Search commits |
+| `search_code` | Full-text code search |
+
+### Pull Request Tools
+| Tool | Description |
+|------|-------------|
+| `repo_list_pull_requests_by_repo_or_project` | List PRs |
+| `repo_get_pull_request_by_id` | Get PR details |
+| `repo_list_pull_request_threads` | PR comments |
+| `repo_list_pull_request_thread_comments` | Thread comments |
+| `repo_list_pull_requests_by_commits` | PRs by commit |
+| `repo_create_pull_request` | Create PR |
+| `repo_update_pull_request` | Update PR |
+| `repo_update_pull_request_reviewers` | Add/remove reviewers |
+| `repo_create_pull_request_thread` | Add comment thread |
+| `repo_reply_to_comment` | Reply to comment |
+| `repo_create_branch` | Create branch |
+
+### Example Prompts
+```
+List repositories in project MyProject
+Show pull requests awaiting my review
+Get details for PR #67 and linked work items
+Create a PR from feature/auth to main
+Add reviewer john@company.com to PR #123
+Search code for "connectionString"
+```
+
+## Pipelines
+
+### Tools
+| Tool | Description |
+|------|-------------|
+| `pipelines_get_build_definitions` | List pipeline definitions |
+| `pipelines_get_builds` | List builds |
+| `pipelines_get_build_status` | Build status |
+| `pipelines_get_build_log` | Build logs |
+| `pipelines_get_build_log_by_id` | Specific log |
+| `pipelines_get_build_changes` | Build changes |
+| `pipelines_get_run` | Get pipeline run |
+| `pipelines_list_runs` | List runs |
+| `pipelines_list_artifacts` | List artifacts |
+| `pipelines_download_artifact` | Download artifact |
+| `pipelines_run_pipeline` | Trigger pipeline |
+| `pipelines_create_pipeline` | Create definition |
+| `pipelines_update_build_stage` | Update stage |
+
+### Example Prompts
+```
+Show recent builds for project MyProject
+Get status of build #456
+Show build logs for failed build #789
+List artifacts from build #123
+Trigger pipeline "CI-Main" on branch main
+```
+
+## Wiki
+
+### Tools
+| Tool | Description |
+|------|-------------|
+| `wiki_list_wikis` | List wikis |
+| `wiki_get_wiki` | Get wiki details |
+| `wiki_list_pages` | List pages |
+| `wiki_get_page` | Get page metadata |
+| `wiki_get_page_content` | Get page content |
+| `wiki_create_or_update_page` | Create/update page |
+| `search_wiki` | Full-text search |
+
+### Example Prompts
+```
+List wikis in project MyProject
+Get content of wiki page "Architecture Overview"
+Search wiki for "deployment process"
+Update wiki page with new content
+```
+
+## Work (Iterations & Capacity)
+
+### Tools
+| Tool | Description |
+|------|-------------|
+| `work_list_iterations` | All project iterations |
+| `work_list_team_iterations` | Team iterations |
+| `work_get_team_capacity` | Team capacity |
+| `work_create_iterations` | Create iterations |
+| `work_assign_iterations` | Assign to team |
+
+### Example Prompts
+```
+List iterations for team "Backend Team"
+Get team capacity for Sprint 5
+Create new iteration "Sprint 6" starting next Monday
+```
+
+## Test Plans
+
+### Tools
+| Tool | Description |
+|------|-------------|
+| `testplan_list_test_plans` | List test plans |
+| `testplan_list_test_suites` | List suites |
+| `testplan_list_test_cases` | List cases |
+| `testplan_show_test_results_from_build_id` | Results from build |
+| `testplan_create_test_plan` | Create plan |
+| `testplan_create_test_suite` | Create suite |
+| `testplan_create_test_case` | Create case |
+| `testplan_add_test_cases_to_suite` | Add cases to suite |
+
+### Example Prompts
+```
+List test plans in project MyProject
+Get test results from build #456
+Create test plan for "Release 2.0"
+```
+
+## Search
+
+| Tool | Description |
+|------|-------------|
+| `search_code` | Search code across repos |
+| `search_wiki` | Search wiki content |
+| `search_workitem` | Search work items |
+
+### Example Prompts
+```
+Search code for "async function handleAuth"
+Search work items for "performance issue"
+Search wiki for "API documentation"
+```
+
+## Common Workflows
+
+### Daily Standup
+```
+Get my work items for project MyProject and help me prepare for standup
+```
+
+### Sprint Planning
+```
+Get all work items in the product backlog and prioritize for a 2-week sprint
+```
+
+### Code Review
+```
+Get PR #67 with linked work items and explain the business impact
+```
+
+### Risk Assessment
+```
+Get current sprint work items and identify items at risk
+```
+
+## Read-Only Mode
+
+For safety, restrict to read-only operations:
+```json
+{
+  "args": ["-y", "@azure-devops/mcp@2.5.0", "MY_ORG", "--read-only"]
+}
+```
+Or via header:
+```json
+{
+  "headers": {
+    "X-MCP-Readonly": "true"
+  }
+}
+```
+
+## Multiple Organizations
+
+Configure separate instances per org:
+```json
+{
+  "mcpServers": {
+    "ado-org1": {
+      "args": ["-y", "@azure-devops/mcp@2.5.0", "ORG1"]
+    },
+    "ado-org2": {
+      "args": ["-y", "@azure-devops/mcp@2.5.0", "ORG2"]
+    }
+  }
+}
+```
+
+## Effective Prompts
+
+**Include context:**
+- Project name: "in project MyProject"
+- Team name: "for team Backend"
+- Time range: "in the last 7 days"
+- State filters: "only active items"
+
+**Avoid stale data:**
+Add "Do not use previously fetched data" for fresh queries.
+
+## Additional Resources
+
+For detailed tool reference: [reference.md](reference.md)

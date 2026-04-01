@@ -1,0 +1,23 @@
+---
+description: "Helm charts — generation, validation, CRD support. Routes to specialized sub-skills."
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Helm
+
+Router skill for Helm chart operations.
+
+## Sub-Skills
+
+| Intent | Load | Triggers |
+|--------|------|----------|
+| Scaffold/generate Helm charts | `Read('.agents/skills/helm-generator/SKILL.md')` | create helm chart, scaffold, helm template |
+| Validate Helm charts | `Read('.agents/skills/helm-validator/SKILL.md')` | validate helm, lint chart, helm test |
+
+## Workflow
+
+1. Match user intent → load sub-skill
+2. For new charts: generate → validate

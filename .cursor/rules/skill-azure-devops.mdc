@@ -1,0 +1,27 @@
+---
+description: "Azure DevOps — pipelines, MCP integration. Routes to specialized sub-skills."
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Azure DevOps
+
+Router skill for Azure DevOps pipeline and MCP operations.
+
+## Sub-Skills
+
+| Intent | Load | Triggers |
+|--------|------|----------|
+| Generate azure-pipelines.yml | `Read('.agents/skills/azure-pipelines-generator/SKILL.md')` | create pipeline, generate pipeline, azure-pipelines.yml |
+| Validate/lint pipeline YAML | `Read('.agents/skills/azure-pipelines-validator/SKILL.md')` | validate pipeline, lint pipeline, check pipeline |
+| Azure DevOps MCP tools | `Read('.agents/skills/azure-devops-mcp/SKILL.md')` | ado, devops mcp, work items |
+| Azure MCP general | `Read('.agents/skills/azure-mcp/SKILL.md')` | azure mcp, azure tools |
+
+## Workflow
+
+1. Match user intent to a row above
+2. Load the sub-skill with `Read()`
+3. Follow that sub-skill's instructions exactly
+4. For pipeline work: generate first, then validate

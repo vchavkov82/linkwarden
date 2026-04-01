@@ -1,0 +1,202 @@
+---
+description: "Use Azure MCP Server tools for Azure resource management, monitoring, deployment, IaC, and diagnostics. Use when working with Azure resources, subscriptions, storage, databases, Key Vault, App Services, VMs, AKS, Cosmos DB, or any Azure service. Also use for best practices, Bicep schemas, Terraform guidance, and troubleshooting Azure issues."
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Azure MCP Server
+
+Use the Azure MCP Server (@azure/mcp) to interact with Azure services via natural language. Version: 2.0.0-beta.28.
+
+## Quick Start
+
+Before using Azure MCP tools, ensure you're authenticated:
+```bash
+az login
+az account show  # verify subscription
+```
+
+## Server Modes
+
+Configure the mode based on your needs:
+
+| Mode | Tools | Best For |
+|------|-------|----------|
+| `namespace` (default) | ~40 (one per service) | General use |
+| `consolidated` | Curated groups | AI agents (recommended) |
+| `all` | 200+ individual | Granular control |
+
+```json
+{
+  "args": ["-y", "@azure/mcp@2.0.0-beta.28", "server", "start", "--mode", "consolidated"]
+}
+```
+
+## Available Service Namespaces
+
+### Best Practices & Architecture
+| Namespace | Use For |
+|-----------|---------|
+| `bestpractices` | Azure Functions, SDK usage, AI app development |
+| `azureterraformbestpractices` | Terraform for Azure |
+| `bicepschema` | Bicep IaC schemas |
+| `wellarchitectedframework` | WAF pillars, design patterns |
+| `cloudarchitect` | System design recommendations |
+
+### Core Resources
+| Namespace | Use For |
+|-----------|---------|
+| `subscription` | List subscriptions |
+| `group` | Resource groups |
+| `deploy` | Deploy templates/scripts |
+
+### Compute
+| Namespace | Use For |
+|-----------|---------|
+| `compute` | VMs, VMSS, managed disks |
+| `aks` | Kubernetes clusters |
+| `appservice` | App Service, web apps |
+| `functionapp` | Azure Functions |
+| `servicefabric` | Service Fabric clusters |
+
+### Storage & Databases
+| Namespace | Use For |
+|-----------|---------|
+| `storage` | Storage accounts, blobs, tables |
+| `fileshares` | Azure Files |
+| `cosmos` | Cosmos DB accounts, databases, containers |
+| `sql` | Azure SQL servers, databases |
+| `postgres` | PostgreSQL servers |
+| `mysql` | MySQL servers |
+| `redis` | Redis cache |
+
+### Security & Identity
+| Namespace | Use For |
+|-----------|---------|
+| `keyvault` | Keys, secrets, certificates |
+| `role` | RBAC assignments |
+| `appconfig` | App Configuration, feature flags |
+
+### Messaging & Integration
+| Namespace | Use For |
+|-----------|---------|
+| `servicebus` | Queues, topics, messages |
+| `eventhubs` | Event Hubs namespaces |
+| `eventgrid` | Topics, subscriptions |
+
+### Monitoring & Diagnostics
+| Namespace | Use For |
+|-----------|---------|
+| `monitor` | Logs, metrics |
+| `applicationinsights` | App Insights resources |
+| `applens` | AppLens diagnostics |
+| `resourcehealth` | Resource health status |
+| `advisor` | Azure Advisor recommendations |
+
+### AI & Search
+| Namespace | Use For |
+|-----------|---------|
+| `foundry` | AI models, deployments |
+| `search` | Azure AI Search indexes |
+| `speech` | Speech services |
+
+### Other
+| Namespace | Use For |
+|-----------|---------|
+| `acr` | Container Registry |
+| `signalr` | SignalR services |
+| `communication` | SMS, email |
+| `pricing` | Pricing, cost estimates |
+| `quota` | Resource quotas |
+| `policy` | Azure Policy |
+
+## Common Workflows
+
+### Get Best Practices First
+Before writing Azure code or IaC, always get best practices:
+- "Get Azure Functions best practices"
+- "Get best practices for building AI apps with Azure"
+- "Get Terraform best practices for Azure Storage"
+- "Get Bicep schema for Microsoft.Storage/storageAccounts"
+
+### Resource Discovery
+```
+List my subscriptions
+List resource groups in subscription 'my-sub'
+List storage accounts in resource group 'my-rg'
+```
+
+### Multi-Service Chaining
+```
+Get connection string from Key Vault 'my-kv' and connect to Cosmos DB
+List storage accounts, then show containers in each
+Query App Insights for errors and check related resource health
+```
+
+### Troubleshooting
+```
+Check health of App Service 'my-app'
+Run AppLens diagnostics on resource '/subscriptions/.../my-resource'
+Query Monitor logs for errors in the last hour
+Get Advisor recommendations for my subscription
+```
+
+### IaC Development
+```
+Get Bicep schema for Microsoft.Web/sites
+Get Well-Architected Framework guidance for reliability
+Get Terraform best practices for Azure networking
+```
+
+## Filtering by Namespace
+
+For focused workflows, use `--namespace`:
+```json
+{
+  "args": ["-y", "@azure/mcp@2.0.0-beta.28", "server", "start", "--namespace", "storage"]
+}
+```
+
+Multiple namespaces:
+```json
+{
+  "args": ["--namespace", "storage", "--namespace", "keyvault"]
+}
+```
+
+## Effective Prompts
+
+**More specific = better results:**
+- ❌ "Tell me about my Azure resources"
+- ✅ "Show connection string for storage account 'mystorageaccount'"
+- ✅ "List storage accounts in subscription 'my-sub' in resource group 'my-rg'"
+
+**Scope operations:**
+- ❌ "List all resources and filter for storage"
+- ✅ "List storage accounts in resource group 'production-rg'"
+
+## Authentication Troubleshooting
+
+### 401 Unauthorized
+- Token expired → `az login` again
+- Access keys disabled → Check RBAC permissions
+
+### 403 Forbidden
+- Wrong account → Use `AZURE_MCP_ONLY_USE_BROKER_CREDENTIAL=true`
+- Wrong subscription → Specify explicitly: "in subscription 'my-sub'"
+- Missing RBAC → Verify permissions at resource/RG/subscription level
+
+## Sensitive Data Handling
+
+Tools that return secrets (Key Vault, connection strings) require user confirmation (elicitation). This is a security feature. To bypass in automation only:
+```json
+{
+  "args": ["--disable-user-confirmation"]
+}
+```
+
+## Additional Resources
+
+For detailed tool documentation: [reference.md](reference.md)

@@ -1,0 +1,52 @@
+---
+description: "Automated frontend design review using Playwright MCP for live browser testing. Evaluates UI against world-class standards across 8 phases."
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Design Review
+
+Automated frontend design review using Playwright MCP for live browser testing. Evaluates UI changes against world-class standards (Stripe, Airbnb, Linear) across 8 phases: preparation, interaction flows, responsiveness, visual polish, accessibility (WCAG 2.1 AA), robustness, code health, and content/console checks.
+
+## When to Use
+
+- Reviewing PRs with UI/UX changes
+- Verifying visual consistency and accessibility compliance
+- Testing responsive design across viewports (desktop 1440px, tablet 768px, mobile 375px)
+- Ensuring new UI meets design system standards
+
+## Requirements
+
+- **Playwright MCP server** must be configured and running
+- A live preview environment (dev server) accessible via browser
+- Project design principles doc (use `design-principles-example.md` as starting template)
+
+## Components
+
+| File | Type | Purpose |
+|------|------|---------|
+| `design-review-agent.md` | Agent | Subagent definition for `@agent-design-review` |
+| `design-review-slash-command.md` | Slash command | `/design-review` command that auto-diffs and reviews |
+| `design-review-claude-md-snippet.md` | CLAUDE.md snippet | Add to project CLAUDE.md for quick visual checks |
+| `design-principles-example.md` | Reference | S-tier SaaS design checklist template |
+
+## Setup
+
+1. Copy `design-review-agent.md` to `<project>/.claude/agents/design-review.md`
+2. Copy `design-review-slash-command.md` to `<project>/.claude/commands/design-review.md`
+3. Add contents of `design-review-claude-md-snippet.md` to your project's CLAUDE.md
+4. Customize `design-principles-example.md` for your project and place in `<project>/context/design-principles.md`
+
+## Review Output
+
+Issues are triaged as:
+- **[Blocker]** -- critical failures requiring immediate fix
+- **[High-Priority]** -- significant issues to fix before merge
+- **[Medium-Priority]** -- improvements for follow-up
+- **[Nitpick]** -- minor aesthetic details
+
+## Source
+
+Forked from [OneRedOak/claude-code-workflows](https://github.com/OneRedOak/claude-code-workflows) (design-review directory).

@@ -1,0 +1,203 @@
+---
+description: "Break work into frontend tasks, create spec branches for Cursor agents to implement"
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Cursor Dispatch
+
+Orchestrate frontend work by creating spec branches that Cursor agents can pick up and implement autonomously.
+
+## When to Use
+
+- User wants end-to-end feature work spanning backend + frontend
+- User says "frontend tasks for Cursor", "dispatch to Cursor", "create Cursor tasks"
+- User wants to parallelize frontend work across Cursor agents
+- Feature requires UI changes that Claude Code shouldn't do itself
+
+## Do Not Use When
+
+- Task is backend-only — just implement it directly
+- Task is a single small frontend fix — do it yourself or suggest the user does it in Cursor manually
+- User wants to brainstorm, not execute
+
+## How It Works
+
+```
+Claude Code                          Cursor Agent (user-driven)
+──────────                           ──────────────────────────
+1. Analyze feature scope
+2. Implement backend (API, DB, etc.)
+3. For each frontend task:
+   a. Create branch from main
+   b. Write .tasks/TASK.md spec
+   c. Push branch
+4. Report ready branches              5. User opens branch in Cursor
+                                      6. Cursor reads .tasks/TASK.md
+                                      7. Cursor implements
+                                      8. User commits + pushes
+9. Review + merge
+```
+
+## Branch Naming
+
+```
+cursor/<project-area>-<short-description>
+```
+
+Examples:
+- `cursor/job-card-salary-range`
+- `cursor/admin-user-filters`
+- `cursor/blog-hero-redesign`
+
+## Spec File Format
+
+Create `.tasks/TASK.md` in the branch root. This is the single file Cursor reads.
+
+```markdown
+# Task: <Clear one-line title>
+
+## Context
+
+<What changed in the backend/API that this frontend task depends on.
+Include relevant API endpoints, new fields, changed behavior.
+Link to specific files if helpful.>
+
+## Requirements
+
+<Numbered list of concrete things to build/change.>
+
+1. ...
+2. ...
+3. ...
+
+## Files to Modify
+
+<Explicit list of files the agent should touch. Be specific.>
+
+- `apps/www/components/Foo.tsx` — update to use new `bar` field
+- `apps/www/components/Foo.test.tsx` — add tests for new behavior
+
+## Design Reference
+
+<Optional. Reference design tokens, Tailwind classes, or existing components to match.>
+
+- Use `text-sm text-muted-foreground` for secondary text
+- Match spacing in `JobListItem` component
+- See `packages/ui/src/card.tsx` for card pattern
+
+## API Contract
+
+<Optional. Show the relevant API request/response shape.>
+
+```json
+GET /api/v1/jobs/:id
+{
+  "salary_min": 50000,
+  "salary_max": 80000,
+  "salary_currency": "BGN"
+}
+```
+
+## Acceptance Criteria
+
+<What "done" looks like. Cursor agent checks these before committing.>
+
+- [ ] Feature works as described
+- [ ] No TypeScript errors (`pnpm typecheck`)
+- [ ] Tests pass (`pnpm test`)
+- [ ] Responsive on mobile
+
+## Notes
+
+<Optional. Gotchas, constraints, or decisions the agent should know.>
+```
+
+## Execution Steps
+
+When the user triggers this skill:
+
+### Step 1: Analyze and Plan
+
+Break the feature into tasks. Categorize each as:
+- **backend** — Claude Code implements directly
+- **frontend** — dispatched to Cursor via spec branch
+
+Output a task list for user confirmation:
+
+```
+Backend (I'll do these):
+  1. Add salary_range to jobs API response
+  2. Add DB migration for salary columns
+
+Frontend (Cursor branches):
+  1. cursor/job-card-salary → Update JobCard to show salary
+  2. cursor/job-filter-salary → Add salary range filter
+  3. cursor/admin-salary-edit → Salary fields in admin job form
+```
+
+### Step 2: Implement Backend
+
+Do the backend work on the current branch. Commit.
+
+### Step 3: Create Spec Branches
+
+For each frontend task:
+
+```bash
+# Create branch from main (not from backend branch — keep them independent)
+git checkout main
+git checkout -b cursor/<name>
+
+# Write the spec
+mkdir -p .tasks
+# Write .tasks/TASK.md with the spec format above
+
+# Push
+git add .tasks/TASK.md
+git commit -m "task: <short description> [cursor-dispatch]"
+git push -u origin cursor/<name>
+
+# Return to working branch
+git checkout -
+```
+
+### Step 4: Report
+
+Output a summary for the user:
+
+```
+Backend work done on current branch.
+
+Cursor branches ready:
+  cursor/job-card-salary        → .tasks/TASK.md (3 files to modify)
+  cursor/job-filter-salary      → .tasks/TASK.md (2 files to modify)
+  cursor/admin-salary-edit      → .tasks/TASK.md (4 files to modify)
+
+In Cursor, for each branch:
+  git checkout cursor/<name>
+  Then tell Cursor: "Read .tasks/TASK.md and implement it"
+```
+
+### Step 5: Review (when user reports completion)
+
+When the user says a Cursor branch is done:
+
+1. Check out the branch
+2. Review the changes against the spec
+3. Run tests (`mise run test`, `mise run lint`)
+4. If good, merge to main
+5. If issues, update `.tasks/TASK.md` with feedback and tell the user
+
+## Rules
+
+1. **One task per branch.** Don't bundle multiple UI changes into one spec.
+2. **Specs must be self-contained.** The Cursor agent has no context beyond `.tasks/TASK.md` — include everything it needs.
+3. **Include file paths.** Don't make the agent search — tell it exactly which files to modify.
+4. **Backend first.** Always implement backend/API changes before creating frontend spec branches, so specs can reference the real API contract.
+5. **Branch from main.** Frontend branches are independent of each other and the backend branch. They all branch from main.
+6. **No git tags or version bumps** in spec branches. Just the spec file and nothing else.
+7. **Keep specs focused.** Each spec should be completable in one Cursor session (roughly 1-5 files, one coherent change).
+8. **Commit message convention.** Spec commits use: `task: <description> [cursor-dispatch]`

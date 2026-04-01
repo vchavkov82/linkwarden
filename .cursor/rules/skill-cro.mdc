@@ -1,0 +1,27 @@
+---
+description: "Conversion rate optimization — forms, landing pages, popups, onboarding, signups, paywalls. Routes to specialized sub-skills."
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Conversion Rate Optimization (CRO)
+
+Router skill for all CRO operations.
+
+## Sub-Skills
+
+| Intent | Load | Triggers |
+|--------|------|----------|
+| Form field optimization | `Read('.agents/skills/form-cro/SKILL.md')` | form, fields, form conversion |
+| Landing page optimization | `Read('.agents/skills/page-cro/SKILL.md')` | landing page, hero, cta, above the fold |
+| Popup/modal optimization | `Read('.agents/skills/popup-cro/SKILL.md')` | popup, modal, overlay, exit intent |
+| Onboarding flow optimization | `Read('.agents/skills/onboarding-cro/SKILL.md')` | onboarding, activation, time to value |
+| Signup flow optimization | `Read('.agents/skills/signup-flow-cro/SKILL.md')` | signup, registration, sign up |
+| Paywall/upgrade optimization | `Read('.agents/skills/paywall-upgrade-cro/SKILL.md')` | paywall, upgrade, pricing page, upsell |
+
+## Workflow
+
+1. Match user intent → load sub-skill
+2. Follow that sub-skill's instructions exactly

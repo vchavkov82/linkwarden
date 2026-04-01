@@ -1,0 +1,36 @@
+---
+description: "Azure infrastructure — compute, deploy, storage, RBAC, diagnostics, cost, compliance. Routes to specialized sub-skills."
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Azure Infrastructure
+
+This is a router skill. Based on user intent, load the appropriate sub-skill.
+
+## Sub-Skills
+
+| Intent | Load | Triggers |
+|--------|------|----------|
+| VM sizing, VMSS, compute recommendations | `Read('.agents/skills/azure-compute/SKILL.md')` | vm, compute, scale set, vmss, gpu |
+| Deploy to Azure (azd up, terraform apply) | `Read('.agents/skills/azure-deploy/SKILL.md')` | deploy, azd up, ship, go live, push to cloud |
+| Prepare new app for Azure | `Read('.agents/skills/azure-prepare/SKILL.md')` | create app, scaffold, set up infrastructure |
+| Validate deployment readiness | `Read('.agents/skills/azure-validate/SKILL.md')` | validate, pre-deploy check |
+| Diagnose Azure issues | `Read('.agents/skills/azure-diagnostics/SKILL.md')` | diagnose, debug azure, issue |
+| Storage accounts, blobs, files | `Read('.agents/skills/azure-storage/SKILL.md')` | storage, blob, azure files |
+| RBAC role assignment | `Read('.agents/skills/azure-rbac/SKILL.md')` | rbac, role, permissions, least privilege |
+| Cost optimization | `Read('.agents/skills/azure-cost-optimization/SKILL.md')` | cost, billing, spend, reserved |
+| Compliance (GDPR, HIPAA, policies) | `Read('.agents/skills/azure-compliance/SKILL.md')` | compliance, regulatory, gdpr, hipaa, policy |
+
+## Workflow
+
+1. Match user intent to a row above
+2. Load the sub-skill with `Read()`
+3. Follow that sub-skill's instructions exactly
+4. If multiple intents apply, load them sequentially (e.g., prepare → validate → deploy)
+
+## Canonical Pipeline
+
+For new deployments: `azure-prepare` → `azure-validate` → `azure-deploy`

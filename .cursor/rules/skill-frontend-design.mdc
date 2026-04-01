@@ -1,0 +1,515 @@
+---
+description: "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, artifacts, posters, or applications (examples include websites, landing pages, dashboards, React components, HTML/CSS layouts, or when styling/beautifying any web UI). Generates creative, polished code and UI design that avoids generic AI aesthetics. Modified from Anthropic original."
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
+
+The user provides frontend requirements: a component, page, application, or interface to build. They may include context about the purpose, audience, or technical constraints.
+
+
+## 1. Design Thinking
+
+Before coding, understand the context and commit to a BOLD aesthetic direction:
+- **Purpose**: What problem does this interface solve? Who uses it?
+- **Tone**: Pick an extreme — see the Design Decision Framework below.
+- **Constraints**: Technical requirements (framework, performance, accessibility).
+- **Differentiation**: What makes this UNFORGETTABLE? What's the one thing someone will remember?
+
+**CRITICAL**: Choose a clear conceptual direction and execute it with precision. Bold maximalism and refined minimalism both work — the key is intentionality, not intensity.
+
+Then implement working code (HTML/CSS/JS, React, Vue, etc.) that is:
+- Production-grade and functional
+- Visually striking and memorable
+- Cohesive with a clear aesthetic point-of-view
+- Meticulously refined in every detail
+
+
+## 2. Design Decision Framework
+
+Choose an aesthetic direction based on product type, audience, and emotional intent. Never default — always decide.
+
+### Aesthetic Directions
+
+| Direction | Best for | Characteristics | Emotional Register |
+|-----------|----------|----------------|--------------------|
+| **Brutally Minimal** | Developer tools, productivity apps, writing tools | Near-monochrome, extreme whitespace, one accent, no decoration | Calm, focused, competent |
+| **Maximalist Chaos** | Creative portfolios, music, youth brands, events | Layer everything — texture, color, type, animation, overlap | Energetic, rebellious, alive |
+| **Editorial / Magazine** | Content sites, blogs, long-form, journalism | Strong typographic hierarchy, pull quotes, column grids, large imagery | Authoritative, cultured, refined |
+| **Brutalist / Raw** | Art, experimental, agencies, personal sites | Exposed structure, system fonts or monospace, visible grid, harsh contrasts | Honest, provocative, anti-corporate |
+| **Luxury / Refined** | Fashion, premium SaaS, fintech, high-end e-commerce | Restrained palette, generous spacing, serif typography, subtle motion | Exclusive, trustworthy, aspirational |
+| **Retro-Futuristic** | Gaming, crypto, AI products, creative tech | Neon accents on dark, scanlines, glitch effects, monospace + display | Edgy, forward-thinking, cyberpunk |
+| **Soft / Pastel** | Health, wellness, education, children's products | Rounded corners, soft shadows, pastel palette, friendly type | Approachable, safe, nurturing |
+| **Organic / Natural** | Sustainability, food, outdoor, craft brands | Earth tones, hand-drawn elements, organic shapes, texture | Authentic, warm, grounded |
+| **Art Deco / Geometric** | Architecture, luxury, events, awards | Gold accents, strong symmetry, geometric patterns, display serif | Elegant, bold, ceremonial |
+| **Industrial / Utilitarian** | Manufacturing, logistics, data-heavy tools, admin panels | Dense information, monospace, muted colors, functional borders | Efficient, no-nonsense, technical |
+| **Playful / Toy-like** | Consumer apps, social, gamified products | Bright saturated colors, bouncy animations, chunky elements, illustration | Fun, accessible, delightful |
+| **Neo-Corporate** | B2B SaaS, enterprise, consulting | Clean but not sterile — subtle gradients, micro-texture, balanced weight | Professional, modern, trustworthy |
+
+### Decision Heuristic
+
+1. **Who is the user?** Developers want clarity. Creatives want expression. Executives want authority. Consumers want delight.
+2. **What is the emotional job?** Trust → refined/minimal. Excitement → maximalist/retro. Competence → editorial/utilitarian. Warmth → soft/organic.
+3. **What is the competitive landscape?** If everyone in the space is minimal, go editorial. If everyone is corporate, go brutalist. Differentiate.
+4. **What is the content density?** High density → utilitarian/editorial. Low density → minimal/luxury. Mixed → neo-corporate.
+
+
+## 3. Color Application Patterns
+
+### The 60-30-10 Rule
+
+Every interface needs a dominant-secondary-accent ratio:
+
+- **60% Dominant** — Background surfaces, large areas. Sets the mood. Usually neutral or very low chroma.
+- **30% Secondary** — Cards, sections, navigation, secondary backgrounds. Provides structure and rhythm.
+- **10% Accent** — CTAs, links, active states, highlights. Draws the eye. This is where your brand color lives.
+
+### Color Hierarchy in Practice
+
+```
+Dominant (60%)    → --color-surface, --color-background
+Secondary (30%)   → --color-surface-raised, --color-surface-sunken, --color-muted
+Accent (10%)      → --color-primary, --color-accent, --color-interactive
+```
+
+### Application Rules
+
+- **Never distribute color evenly.** A page where everything is equally colorful is a page where nothing stands out.
+- **One dominant hue per screen.** Two competing hues create tension (sometimes intentional — usually not).
+- **Neutrals carry brand DNA.** Tint your grays toward your primary hue. `oklch(0.95 0.01 250)` instead of pure gray.
+- **Saturation decreases with area.** Large surfaces → low chroma. Small accents → high chroma.
+- **Status colors must be distinct from brand.** If your brand is red, your error state needs a different red or a different signal entirely.
+- **Use OKLCH for perceptual uniformity.** Two colors at the same lightness in OKLCH actually look equally bright, unlike HSL.
+
+### Palette Construction
+
+```css
+/* Seed: a single brand hue (e.g., 250 for blue) */
+--surface:     oklch(0.98 0.005 250);   /* barely tinted white */
+--surface-alt: oklch(0.94 0.01 250);    /* subtle differentiation */
+--muted:       oklch(0.70 0.03 250);    /* secondary text */
+--foreground:  oklch(0.20 0.02 250);    /* primary text */
+--primary:     oklch(0.55 0.20 250);    /* brand accent */
+--primary-fg:  oklch(0.98 0.01 250);    /* text on primary */
+```
+
+
+## 4. Typography System
+
+### Font Pairing Categories
+
+Great typography is about contrast with harmony. Pair fonts that differ in structure but share a mood.
+
+| Category | Heading | Body | Mood | Use When |
+|----------|---------|------|------|----------|
+| **Serif + Sans** | Fraunces, Playfair Display, Lora | DM Sans, Satoshi, General Sans | Sophisticated, editorial | Content-heavy, editorial, luxury |
+| **Display + Geometric** | Cabinet Grotesk, Clash Display, Unbounded | Plus Jakarta Sans, Outfit, Sora | Modern, bold | Landing pages, marketing, SaaS |
+| **Mono + Humanist** | JetBrains Mono, Berkeley Mono, Geist Mono | Geist, Source Sans 3, Nunito | Technical, precise | Developer tools, dashboards, documentation |
+| **Humanist + Neo-Grotesque** | Instrument Serif, Newsreader | Instrument Sans, Switzer | Warm but professional | Corporate, fintech, healthcare |
+| **Slab + Sans** | Zilla Slab, Roboto Slab | Work Sans, Manrope | Grounded, trustworthy | Government, education, non-profit |
+| **Display + Display** | Migra, Gambarino | Satoshi, General Sans | Expressive, distinctive | Portfolio, creative agency, fashion |
+
+### Distinctive Font Recommendations (Google Fonts + Free)
+
+**Display / Heading fonts worth reaching for:**
+- Fraunces (variable, old-style with personality)
+- Cabinet Grotesk (geometric, confident)
+- Clash Display (sharp, modern)
+- Instrument Serif (elegant, contemporary)
+- Gambetta (editorial, refined)
+- Space Mono (technical, retro-futuristic)
+- Bricolage Grotesque (quirky, characterful)
+- Unbounded (bold, geometric, futuristic)
+
+**Body fonts that aren't boring:**
+- Satoshi (clean but distinctive, slightly geometric)
+- General Sans (versatile, modern)
+- DM Sans (geometric, friendly)
+- Plus Jakarta Sans (rounded, approachable)
+- Outfit (geometric, even-tempered)
+- Geist (Vercel's font — neutral with character)
+- Switzer (humanist, professional)
+- Manrope (semi-rounded, readable)
+
+### Typography Scale
+
+Use a modular scale. Choose a ratio based on content type:
+
+| Ratio | Name | Best for |
+|-------|------|----------|
+| 1.125 | Major second | Dense UI, dashboards, admin |
+| 1.200 | Minor third | General-purpose, SaaS |
+| 1.250 | Major third | Marketing, editorial |
+| 1.333 | Perfect fourth | Landing pages, storytelling |
+| 1.500 | Perfect fifth | Hero-driven, dramatic |
+
+```css
+--text-xs:   clamp(0.70rem, 0.65rem + 0.25vw, 0.80rem);
+--text-sm:   clamp(0.80rem, 0.75rem + 0.25vw, 0.90rem);
+--text-base: clamp(0.95rem, 0.90rem + 0.25vw, 1.05rem);
+--text-lg:   clamp(1.15rem, 1.05rem + 0.50vw, 1.30rem);
+--text-xl:   clamp(1.40rem, 1.20rem + 1.00vw, 1.80rem);
+--text-2xl:  clamp(1.75rem, 1.40rem + 1.75vw, 2.50rem);
+--text-3xl:  clamp(2.20rem, 1.60rem + 3.00vw, 3.75rem);
+--text-4xl:  clamp(2.80rem, 1.80rem + 5.00vw, 5.50rem);
+```
+
+### Typography Rules
+
+- **Never use just one weight.** A single weight makes hierarchy invisible. Use at least three: regular (400), medium (500), bold (700).
+- **Line height decreases as size increases.** Body: 1.5-1.7. Headings: 1.1-1.3. Display: 1.0-1.1.
+- **Letter-spacing tightens for large text.** Display: -0.02em to -0.04em. Body: 0. Small caps/labels: +0.05em.
+- **Limit line length.** 60-75 characters for body. Use `max-width: 65ch`.
+- **Use font-feature-settings.** Enable ligatures, old-style numerals, tabular figures where appropriate.
+
+
+## 5. Spacing & Rhythm
+
+### Spacing as Design Language
+
+Whitespace is not empty — it's structural. It communicates hierarchy, groups related elements, and creates breathing room.
+
+### The 8pt Grid
+
+Base all spacing on multiples of 8px. For tighter UI, use a 4px sub-grid.
+
+```css
+--space-1:  0.25rem;  /* 4px  — hairline gaps, icon-to-label */
+--space-2:  0.50rem;  /* 8px  — tight padding, inline spacing */
+--space-3:  0.75rem;  /* 12px — compact components */
+--space-4:  1.00rem;  /* 16px — default padding, form gaps */
+--space-6:  1.50rem;  /* 24px — card padding, section inner */
+--space-8:  2.00rem;  /* 32px — section gaps */
+--space-12: 3.00rem;  /* 48px — major section breaks */
+--space-16: 4.00rem;  /* 64px — page section spacing */
+--space-24: 6.00rem;  /* 96px — hero padding, dramatic space */
+--space-32: 8.00rem;  /* 128px — full section breathing room */
+```
+
+### Vertical Rhythm
+
+- **Sections should breathe unevenly.** Not every section needs the same top/bottom padding. Hero sections get more space. Dense content gets less.
+- **Group by proximity.** Elements that belong together should be closer together than elements that don't. This is Gestalt's Law of Proximity — the most important layout principle.
+- **Progressive spacing.** Within a section, increase spacing as you move down: heading → body (tight) → CTA (more space). This creates a natural reading cadence.
+
+### Section Pacing
+
+Alternate between dense and spacious sections to create rhythm:
+
+```
+[Hero — spacious, dramatic]
+[Features — medium density, grid]
+[Testimonial — spacious, single quote, full-width]
+[Pricing — dense, comparison table]
+[CTA — spacious, centered, minimal]
+[Footer — dense, utilitarian]
+```
+
+This alternation prevents monotony and guides the user through content with natural breathing points.
+
+
+## 6. Visual Hierarchy
+
+### The Hierarchy Toolkit
+
+Control where the eye goes using these tools, in order of strength:
+
+1. **Size** — Largest element wins. A 72px headline dominates everything.
+2. **Color contrast** — High contrast against background draws attention. Your accent color should only appear on what matters most.
+3. **Weight** — Bold text in a field of regular text is a magnet.
+4. **Position** — Top-left (LTR) gets seen first. Center gets attention. Bottom-right is where the eye exits.
+5. **Whitespace** — Isolation draws attention. An element surrounded by space feels important.
+6. **Motion** — Anything that moves gets attention. Use sparingly — animation is a loaded gun.
+
+### Hierarchy Patterns
+
+**The Squint Test:** Squint at your screen. If you can still tell what's most important, your hierarchy works. If everything blurs into sameness, you need more contrast between levels.
+
+**Three levels maximum per view:**
+- **Level 1** — One thing. The headline, the primary CTA, the key number. Largest, boldest, most colorful.
+- **Level 2** — Supporting content. Subheadings, secondary info, navigation. Medium size, medium weight, muted color.
+- **Level 3** — Everything else. Body text, labels, metadata. Smallest, lightest, most neutral.
+
+**Common mistakes:**
+- Making everything Level 1 (nothing stands out)
+- Using color for Level 3 items (labels, metadata) instead of reserving it for Level 1
+- Headings that are only slightly larger than body text
+
+
+## 7. Micro-interactions Catalog
+
+### Hover States
+
+```css
+/* Subtle lift — cards, clickable surfaces */
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.08);
+  transition: all 200ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* Color shift — links, text buttons */
+.link:hover {
+  color: var(--primary);
+  text-decoration-color: var(--primary);
+  transition: color 150ms ease;
+}
+
+/* Background fill — nav items, list items */
+.nav-item:hover {
+  background: var(--surface-alt);
+  transition: background 150ms ease;
+}
+
+/* Scale — icon buttons, small interactive elements */
+.icon-btn:hover {
+  transform: scale(1.08);
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+```
+
+### Button Feedback
+
+```css
+/* Press down effect */
+.button:active {
+  transform: scale(0.97);
+  transition: transform 100ms ease;
+}
+
+/* Loading state — swap content, add spinner */
+.button[data-loading] {
+  pointer-events: none;
+  opacity: 0.7;
+}
+.button[data-loading] .label { opacity: 0; }
+.button[data-loading] .spinner { opacity: 1; }
+```
+
+### Page Transitions
+
+```css
+/* Staggered entrance — the single most impactful animation */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: fadeUp 500ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 80ms; }
+.stagger-item:nth-child(3) { animation-delay: 160ms; }
+.stagger-item:nth-child(4) { animation-delay: 240ms; }
+
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+```
+
+### Scroll Reveals
+
+```css
+/* Modern scroll-driven animation (CSS only, no JS) */
+@supports (animation-timeline: view()) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: scrollReveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 30%;
+  }
+  @keyframes scrollReveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+```
+
+### Loading States
+
+- **Skeleton screens** over spinners — always. They reduce perceived wait time.
+- **Pulse animation** for skeletons: subtle `oklch(0.92 0.005 0)` ↔ `oklch(0.96 0.005 0)` oscillation.
+- **Progressive loading** — show content as it arrives, don't wait for everything.
+- **Optimistic updates** — reflect the action immediately, reconcile with server after.
+
+### Motion Rules
+
+- **150-200ms** for hover, focus, toggle states
+- **250-400ms** for entrances, route transitions, expanding panels
+- **400-600ms** for complex orchestrated sequences
+- **Use `cubic-bezier(0.33, 1, 0.68, 1)`** (ease-out-quint) as default easing — it feels natural
+- **Always respect `prefers-reduced-motion`** — provide `@media (prefers-reduced-motion: reduce)` overrides
+
+
+## 8. Dark Mode Design
+
+Dark mode is not "invert the colors." It's a separate design language with its own rules.
+
+### Core Principles
+
+1. **Reduce chroma by 10-20%.** Colors that look great on white look garish on dark. Desaturate.
+2. **Surfaces use elevation, not borders.** Lighter surface = higher elevation. Build depth with layered grays.
+3. **Never use pure black (`#000`).** Use `oklch(0.13 0.01 <hue>)` — a very dark, slightly tinted surface.
+4. **Text is not pure white.** Use `oklch(0.93 0.005 <hue>)` for primary text. Slightly off-white reduces eye strain.
+5. **Shadows are nearly invisible.** In dark mode, shadows don't work. Use subtle borders or surface color differences instead.
+
+### Surface Elevation Scale
+
+```css
+/* Dark mode surfaces — lighter = higher */
+--surface-base:    oklch(0.13 0.01 250);  /* deepest background */
+--surface-raised:  oklch(0.17 0.01 250);  /* cards, panels */
+--surface-overlay: oklch(0.21 0.01 250);  /* modals, dropdowns */
+--surface-top:     oklch(0.25 0.01 250);  /* tooltips, popovers */
+```
+
+### Dark Mode Color Adjustments
+
+```css
+/* Light mode accent */
+--primary-light: oklch(0.55 0.20 250);
+
+/* Dark mode — reduce chroma, increase lightness */
+--primary-dark:  oklch(0.68 0.15 250);
+```
+
+### Glow Effects (Dark Mode Only)
+
+In dark mode, glows replace shadows as the primary depth cue:
+
+```css
+.dark .glow-element {
+  box-shadow:
+    0 0 20px oklch(0.55 0.15 250 / 0.15),
+    0 0 60px oklch(0.55 0.15 250 / 0.05);
+}
+
+/* Glow text for emphasis */
+.dark .glow-text {
+  text-shadow: 0 0 30px oklch(0.60 0.15 250 / 0.3);
+}
+```
+
+### Dark Mode Checklist
+
+- [ ] Background is not pure black
+- [ ] Text is not pure white
+- [ ] Primary accent chroma reduced from light mode
+- [ ] Surfaces create depth through lightness, not shadows
+- [ ] Borders are subtle (`oklch(1 0 0 / 0.08)`) not harsh
+- [ ] Images/illustrations have reduced brightness or a subtle overlay
+- [ ] Status colors still meet contrast requirements
+- [ ] Focus rings are visible against dark surfaces
+
+
+## 9. Anti-Patterns: The "AI Slop" Catalog
+
+These patterns scream "generated by AI" and must be avoided. Each has a specific alternative.
+
+### Typography Slop
+
+| Anti-Pattern | Why It's Bad | Do This Instead |
+|-------------|-------------|-----------------|
+| Inter everywhere | It's the new Arial — invisible, generic | Use Satoshi, DM Sans, Plus Jakarta Sans, or better yet a distinctive display font |
+| Roboto, Open Sans, Lato | Overexposed, no character | See font recommendations above |
+| System font stack for display text | Signals "I didn't bother choosing" | System fonts are fine for body; use a real font for headings |
+| One font weight | Flat hierarchy, no visual interest | Use 3+ weights: 400, 500, 700 minimum |
+| Default letter-spacing on large text | Looks loose and unrefined | Tighten to -0.02em or -0.03em for display sizes |
+
+### Color Slop
+
+| Anti-Pattern | Why It's Bad | Do This Instead |
+|-------------|-------------|-----------------|
+| Purple-to-blue gradient on white | The #1 AI cliche | Any other palette. Earth tones. Monochrome. Warm accents. |
+| Evenly distributed rainbow palette | No hierarchy, carnival vibes | 60/30/10 rule with a single dominant hue |
+| Pure gray neutrals | Cold, disconnected from brand | Tint neutrals with your primary hue |
+| Oversaturated everything | Overwhelming, amateur | High chroma only for accents; muted for surfaces |
+| `#000` text on `#fff` background | Harsh, eye-straining | Dark neutral on off-white: `oklch(0.15 0.02 hue)` on `oklch(0.98 0.005 hue)` |
+
+### Layout Slop
+
+| Anti-Pattern | Why It's Bad | Do This Instead |
+|-------------|-------------|-----------------|
+| Three equal cards in a row | Every AI landing page ever | Vary card sizes, use asymmetric grids, feature one card prominently |
+| Centered everything | Monotonous, no visual flow | Mix alignment. Left-align body text. Use asymmetric compositions. |
+| Icon + heading + paragraph x 6 in a grid | Template-grade layout | Vary the rhythm. Use different component patterns per section. |
+| Fixed 1200px container everything | Desktop tunnel vision | Let some elements break the container. Use full-bleed sections. |
+| Uniform section padding | Metronomic, boring | Vary padding based on content density and importance |
+
+### Motion Slop
+
+| Anti-Pattern | Why It's Bad | Do This Instead |
+|-------------|-------------|-----------------|
+| Everything fades in from bottom | Predictable, monotonous | Vary direction. Some from left, some scale, some just fade. |
+| 3D card tilt on hover | Overused since 2020 | Subtle lift, color shift, or border highlight |
+| Parallax on every section | Distracting, motion-sickness risk | One parallax moment per page, if any |
+| Typewriter effect on every heading | Slow, blocks reading | Use it once for a hero, never elsewhere |
+| Bounce/elastic easing everywhere | Juvenile, cartoon-like | `cubic-bezier(0.33, 1, 0.68, 1)` — smooth ease-out |
+
+### Content Slop
+
+| Anti-Pattern | Why It's Bad | Do This Instead |
+|-------------|-------------|-----------------|
+| "Welcome to [Product]" hero | Says nothing, wastes prime real estate | Lead with the value proposition or a provocative statement |
+| Gradient blob/mesh background with no purpose | Pure decoration, no information | If using blobs, make them subtle and contextual |
+| Stock-photo-style hero images | Generic, trust-eroding | Use real product screenshots, illustrations, or abstract art |
+| "Get Started" as the only CTA text | Vague, low-commitment language | Be specific: "Start building", "See pricing", "Try for free" |
+| Fake testimonials with AI headshots | Instantly recognizable, destroys trust | Use real quotes or skip testimonials entirely |
+
+
+## 10. Inspiration Sources
+
+Study these for specific qualities. Don't copy — understand what makes them work.
+
+### Developer Tools & Productivity
+
+| Reference | What to Learn |
+|-----------|--------------|
+| **Linear** (linear.app) | The gold standard for minimal UI. Keyboard-first design, subtle motion, monochrome with surgical accent color usage. Study their command palette and loading states. |
+| **Raycast** (raycast.com) | Blurs the line between native and web. Tight spacing, icon consistency, speed as a design principle. |
+| **Vercel** (vercel.com) | Clean dark mode done right. Typographic hierarchy with Geist. Marketing pages that feel like product. |
+| **GitHub** (github.com) | Information density without overwhelm. Study their progressive disclosure and color-coding system. |
+| **Supabase** (supabase.com) | Developer marketing that doesn't feel corporate. Bold color, strong illustration, clear hierarchy. |
+
+### Consumer & Brand
+
+| Reference | What to Learn |
+|-----------|--------------|
+| **Stripe** (stripe.com) | The benchmark for polished marketing. Gradient mastery, animation choreography, typographic precision. Every detail is considered. |
+| **Apple** (apple.com) | Scroll-driven storytelling, product photography as hero, extreme whitespace confidence. |
+| **Arc** (arc.net) | Playful but refined. Custom illustrations, bold color, personality in every interaction. |
+| **Notion** (notion.so) | Friendly minimalism. Illustration style, warm neutrals, approachable without being childish. |
+| **Figma** (figma.com) | Color confidence. Bold, saturated palette that works across light and dark. Energetic but professional. |
+
+### Editorial & Content
+
+| Reference | What to Learn |
+|-----------|--------------|
+| **The Verge** (theverge.com) | Maximum editorial impact. Bold typography, color blocks, asymmetric layouts, magazine-on-web energy. |
+| **Stripe Press** (press.stripe.com) | Book-quality typography on the web. Serif mastery, generous margins, reading experience as product. |
+| **Readymag** (readymag.com) | Web-native editorial design. Each page is a composition. Study their use of scale and negative space. |
+
+### E-commerce & Luxury
+
+| Reference | What to Learn |
+|-----------|--------------|
+| **Aesop** (aesop.com) | Restraint as luxury. Limited palette, generous whitespace, typography doing all the heavy lifting. |
+| **Teenage Engineering** (teenage.engineering) | Brutalist product design meets the web. Raw, confident, memorable. Anti-template. |
+| **SSENSE** (ssense.com) | Fashion e-commerce without clutter. Massive imagery, minimal chrome, bold editorial grid. |
+
+
+## 11. Frontend Aesthetics Guidelines (Summary)
+
+Focus on:
+- **Typography**: Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts; opt for distinctive choices that elevate the frontend's aesthetics — unexpected, characterful font choices. Pair a distinctive display font with a refined body font.
+- **Color & Theme**: Commit to a cohesive aesthetic. Use CSS variables for consistency. Dominant colors with sharp accents outperform timid, evenly-distributed palettes. Apply the 60/30/10 rule.
+- **Motion**: Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML. Use Motion library for React when available. Focus on high-impact moments: one well-orchestrated page load with staggered reveals creates more delight than scattered micro-interactions. Use scroll-triggering and hover states that surprise.
+- **Spatial Composition**: Unexpected layouts. Asymmetry. Overlap. Diagonal flow. Grid-breaking elements. Generous negative space OR controlled density. Alternate between dense and spacious sections.
+- **Backgrounds & Visual Details**: Create atmosphere and depth rather than defaulting to solid colors. Add contextual effects and textures that match the overall aesthetic. Apply creative forms like gradient meshes, noise textures, geometric patterns, layered transparencies, dramatic shadows, decorative borders, custom cursors, and grain overlays.
+
+Interpret creatively and make unexpected choices that feel genuinely designed for the context. No design should be the same. Vary between light and dark themes, different fonts, different aesthetics. NEVER converge on common choices across generations.
+
+**IMPORTANT**: Match implementation complexity to the aesthetic vision. Maximalist designs need elaborate code with extensive animations and effects. Minimalist or refined designs need restraint, precision, and careful attention to spacing, typography, and subtle details. Elegance comes from executing the vision well.
+
+Remember: Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created when thinking outside the box and committing fully to a distinctive vision.

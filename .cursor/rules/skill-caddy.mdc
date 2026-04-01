@@ -1,0 +1,428 @@
+---
+description: "Caddy web server configuration, reverse proxy, static file serving, and automatic HTTPS. Use when creating Caddyfiles, configuring reverse proxies, TLS, file serving, or any Caddy-related infrastructure."
+globs: ["Caddyfile*"]
+alwaysApply: false
+---
+
+# @generated from brain — do not edit manually
+
+
+# Caddy Web Server Skill
+
+Expert guidance for configuring and managing Caddy web server. Covers Caddyfile syntax, reverse proxy, static file serving, automatic HTTPS, and production patterns.
+
+> **Operational gateway**: To manage the production Caddy gateway (add sites, deploy config, sync), use the `service-registry` skill which covers DNS records, Caddy gateway, caching, and IP whitelisting. Source: `~/src/registry/caddy/Caddyfile`.
+
+
+## Behavioral Classification
+
+**Type**: Advisory + Generation
+
+**Directive**: Generate correct Caddyfile configurations and advise on Caddy best practices.
+
+
+## Caddyfile Structure
+
+A Caddyfile consists of site blocks. Each block starts with an address followed by directives in curly braces:
+
+```caddyfile
+example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+Single-site shorthand (no braces needed):
+
+```caddyfile
+localhost
+
+file_server
+```
+
+### Global Options Block
+
+Must appear first, no keys:
+
+```caddyfile
+{
+    email admin@example.com
+    debug
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+```
+
+
+## Site Addresses
+
+| Address | Behavior |
+|---------|----------|
+| `example.com` | HTTPS with public cert (auto) |
+| `*.example.com` | Wildcard HTTPS cert |
+| `localhost` | HTTPS with local cert |
+| `:8080` | HTTP on port 8080 |
+| `http://example.com` | Force HTTP (no TLS) |
+| `https://example.com` | Explicit HTTPS |
+
+Multiple addresses: `localhost:8080, example.com, www.example.com { ... }`
+
+Environment variables in addresses: `{$DOMAIN:localhost} { ... }`
+
+
+## Core Directives Reference
+
+| Directive | Purpose |
+|-----------|---------|
+| `reverse_proxy` | Proxy to backend services |
+| `file_server` | Serve static files from disk |
+| `root` | Set site root path |
+| `tls` | Customize TLS settings |
+| `encode` | Compress responses (gzip, zstd) |
+| `header` | Set/remove response headers |
+| `redir` | HTTP redirect |
+| `rewrite` | Internal URI rewrite |
+| `handle` | Mutually-exclusive directive group |
+| `handle_path` | Like handle, but strips path prefix |
+| `handle_errors` | Error handling routes |
+| `log` | Access/request logging |
+| `basic_auth` | HTTP Basic Authentication |
+| `forward_auth` | Delegate auth to external service |
+| `respond` | Hard-coded response |
+| `templates` | Execute templates on response |
+| `try_files` | Rewrite based on file existence |
+| `uri` | Manipulate the URI |
+| `import` | Include snippets or files |
+| `vars` | Set arbitrary variables |
+| `map` | Map input to outputs |
+| `bind` | Customize socket address |
+| `metrics` | Prometheus metrics endpoint |
+| `tracing` | OpenTelemetry integration |
+| `request_header` | Manipulate request headers |
+| `request_body` | Manipulate request body |
+| `php_fastcgi` | PHP via FastCGI |
+| `abort` | Abort the request |
+| `error` | Trigger an error |
+| `route` | Literal directive ordering |
+| `push` | HTTP/2 server push |
+| `intercept` | Intercept handler responses |
+| `invoke` | Invoke a named route |
+| `log_append` | Append field to access log |
+| `log_skip` | Skip logging for matched requests |
+| `method` | Change HTTP method internally |
+| `fs` | Set filesystem for file I/O |
+
+
+## Common Patterns
+
+### Reverse Proxy
+
+```caddyfile
+example.com {
+    reverse_proxy localhost:9000
+}
+```
+
+With load balancing:
+
+```caddyfile
+example.com {
+    reverse_proxy app-01:8080 app-02:8080 {
+        lb_policy round_robin
+        health_uri /health
+        health_interval 10s
+    }
+}
+```
+
+With header manipulation:
+
+```caddyfile
+example.com {
+    reverse_proxy localhost:9000 {
+        header_up Host {upstream_hostport}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+}
+```
+
+### Static File Server
+
+```caddyfile
+example.com {
+    root * /var/www/html
+    file_server
+}
+```
+
+With directory browsing:
+
+```caddyfile
+example.com {
+    root * /var/www/html
+    file_server browse
+}
+```
+
+### SPA (Single Page Application)
+
+```caddyfile
+example.com {
+    root * /var/www/app
+    try_files {path} /index.html
+    file_server
+}
+```
+
+### API + SPA Combined
+
+```caddyfile
+example.com {
+    handle /api/* {
+        reverse_proxy localhost:8080
+    }
+    handle {
+        root * /var/www/app
+        try_files {path} /index.html
+        file_server
+    }
+}
+```
+
+### HTTPS Redirect + WWW Redirect
+
+```caddyfile
+www.example.com {
+    redir https://example.com{uri} permanent
+}
+
+example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+### Compression
+
+```caddyfile
+example.com {
+    encode zstd gzip
+    file_server
+}
+```
+
+### Security Headers
+
+```caddyfile
+example.com {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    reverse_proxy localhost:8080
+}
+```
+
+### Logging
+
+```caddyfile
+example.com {
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 100MiB
+            roll_keep 5
+        }
+        format json
+    }
+    reverse_proxy localhost:8080
+}
+```
+
+### PHP (WordPress example)
+
+```caddyfile
+example.com {
+    root * /var/www/wordpress
+    encode gzip
+    php_fastcgi unix//run/php/php-fpm.sock
+    file_server
+}
+```
+
+
+## Matchers
+
+Filter which requests a directive applies to:
+
+```caddyfile
+# Path matcher (inline)
+reverse_proxy /api/* localhost:8080
+
+# Wildcard (all requests)
+root * /var/www
+
+# Named matcher
+@post {
+    method POST
+}
+reverse_proxy @post localhost:9001
+
+# Combined conditions
+@websockets {
+    header Connection *Upgrade*
+    header Upgrade websocket
+}
+reverse_proxy @websockets localhost:6001
+```
+
+
+## Snippets
+
+Reusable config blocks:
+
+```caddyfile
+(logging) {
+    log {
+        output file /var/log/caddy/{args[0]}.log
+        format json
+    }
+}
+
+example.com {
+    import logging example
+    reverse_proxy localhost:8080
+}
+```
+
+
+## Named Routes
+
+```caddyfile
+&(app-proxy) {
+    reverse_proxy app-01:8080 app-02:8080
+}
+
+example.com {
+    invoke app-proxy
+}
+```
+
+
+## Environment Variables
+
+Substituted before Caddyfile parsing:
+
+```caddyfile
+{$DOMAIN:localhost} {
+    reverse_proxy {$BACKEND:localhost:8080}
+}
+```
+
+Runtime substitution via placeholders: `{env.API_KEY}`
+
+
+## Placeholders
+
+Common shorthands:
+
+| Shorthand | Expands to |
+|-----------|------------|
+| `{path}` | `{http.request.uri.path}` |
+| `{method}` | `{http.request.method}` |
+| `{host}` | `{http.request.host}` |
+| `{remote_host}` | `{http.request.remote.host}` |
+| `{client_ip}` | `{http.vars.client_ip}` |
+| `{uri}` | `{http.request.uri}` |
+| `{header.*}` | `{http.request.header.*}` |
+| `{cookie.*}` | `{http.request.cookie.*}` |
+| `{upstream_hostport}` | `{http.reverse_proxy.upstream.hostport}` |
+
+
+## TLS Configuration
+
+Auto HTTPS is the default. Override when needed:
+
+```caddyfile
+# Custom cert files
+example.com {
+    tls /path/to/cert.pem /path/to/key.pem
+}
+
+# Internal (self-signed)
+example.com {
+    tls internal
+}
+
+# ACME with DNS challenge (Cloudflare example)
+example.com {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+}
+
+# Disable HTTPS
+http://example.com {
+    respond "Hello, HTTP!"
+}
+```
+
+
+## CLI Quick Reference
+
+```bash
+caddy run                    # Run with Caddyfile in current dir
+caddy run --config /path     # Run with specific config
+caddy start                  # Start as background daemon
+caddy stop                   # Stop background daemon
+caddy reload                 # Reload config (zero-downtime)
+caddy adapt                  # Convert Caddyfile to JSON
+caddy validate               # Validate config
+caddy fmt --overwrite        # Format Caddyfile in place
+caddy file-server            # Quick static file server
+caddy file-server --browse   # With directory listing
+caddy reverse-proxy --to :9000  # Quick reverse proxy
+```
+
+
+## Docker Usage
+
+```yaml
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+```
+
+**Important**: The `/data` volume stores TLS certificates. Persist it to avoid re-issuing certs.
+
+
+## Best Practices
+
+1. **Let Caddy manage HTTPS** — avoid manual TLS config unless necessary
+2. **Use `handle` blocks** for mutually-exclusive routing (not `route` unless ordering matters)
+3. **Use `handle_path`** when you want the prefix stripped before passing to backend
+4. **Use snippets** for repeated configuration blocks
+5. **Use environment variables** for secrets and environment-specific values
+6. **Always persist `/data` volume** in Docker to preserve certificates
+7. **Use `caddy fmt`** to keep Caddyfiles consistently formatted
+8. **Use `caddy validate`** before deploying config changes
+9. **Prefer `encode zstd gzip`** (zstd first, falls back to gzip)
+10. **Set security headers** in production configurations
+
+
+*Last updated: March 2026*
