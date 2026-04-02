@@ -195,3 +195,35 @@ run = "cd apps/web && npx playwright test --headed"
 description = "Run all tests (unit + e2e)"
 depends = ["test"]
 run = "cd apps/web && npx playwright test"
+
+[tasks.clean]
+description = "Remove build artifacts, caches, and generated files"
+run = """
+echo "Cleaning build artifacts..."
+rm -rf apps/web/.next
+rm -rf apps/web/out
+rm -rf apps/worker/dist
+rm -rf .turbo
+rm -rf coverage
+rm -rf apps/web/test-results
+rm -rf apps/web/playwright-report
+rm -rf apps/web/blob-report
+echo "Cleaning caches..."
+rm -rf node_modules/.cache
+rm -rf apps/web/node_modules/.cache
+rm -rf .yarn/cache
+echo "Done!"
+"""
+
+[tasks."clean:all"]
+description = "Deep clean: artifacts + node_modules (requires yarn install after)"
+run = """
+mise run clean
+echo "Removing node_modules..."
+rm -rf node_modules
+rm -rf apps/web/node_modules
+rm -rf apps/worker/node_modules
+rm -rf apps/mobile/node_modules
+rm -rf packages/*/node_modules
+echo "Done! Run 'yarn install' to reinstall dependencies."
+"""
