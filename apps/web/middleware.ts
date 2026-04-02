@@ -2,12 +2,22 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * When DEBUG_API=true, log every API request (method, path, rough size).
- * Use `mise run dev:debug` or set DEBUG_API in the environment / .env.dev.
- * Extension and mobile traffic then shows up in the Next.js terminal.
+ * Log every /api request when debug is enabled.
+ *
+ * API routes run in Node and see DEBUG_API from the shell (mise dev:debug).
+ * Middleware runs on the Edge runtime and often does NOT inherit shell-only
+ * env unless it is in a .env file — Next inlines NEXT_PUBLIC_* reliably, so
+ * dev:debug sets both DEBUG_API and NEXT_PUBLIC_DEBUG_API.
  */
+function isApiDebugEnabled(): boolean {
+  return (
+    process.env.DEBUG_API === "true" ||
+    process.env.NEXT_PUBLIC_DEBUG_API === "true"
+  );
+}
+
 export function middleware(request: NextRequest) {
-  if (process.env.DEBUG_API !== "true") {
+  if (!isApiDebugEnabled()) {
     return NextResponse.next();
   }
 
