@@ -1,8 +1,10 @@
-import { ArchivedFormat } from "@linkwarden/types";
 import Image from "next/image";
 import React from "react";
 import { useInView } from "react-intersection-observer";
 import { cn } from "@/lib/utils";
+
+/** Matches `ArchivedFormat.jpeg` in @linkwarden/types (avoid importing workspace package in this leaf component). */
+const ARCHIVE_FORMAT_JPEG = 1;
 
 type Props = {
   linkId: number;
@@ -32,7 +34,7 @@ function LazyLinkPreview({
     <div ref={ref} className={cn("relative w-full", imageHeightClass)}>
       {inView ? (
         <Image
-          src={`/api/v1/archives/${linkId}?format=${ArchivedFormat.jpeg}&preview=true&updatedAt=${updatedAt}`}
+          src={`/api/v1/archives/${linkId}?format=${ARCHIVE_FORMAT_JPEG}&preview=true&updatedAt=${updatedAt}`}
           width={1280}
           height={720}
           alt=""
