@@ -5,8 +5,9 @@ import { LinkRequestQuery } from "@linkwarden/types/global";
 import verifyUser from "@/lib/api/verifyUser";
 import deleteLinksById from "@/lib/api/controllers/links/bulk/deleteLinksById";
 import updateLinks from "@/lib/api/controllers/links/bulk/updateLinks";
+import { withDebugLogging } from "@/lib/api/debugLogger";
 
-export default async function links(req: NextApiRequest, res: NextApiResponse) {
+async function linksHandler(req: NextApiRequest, res: NextApiResponse) {
   const user = await verifyUser({ req, res });
   if (!user) return;
 
@@ -88,3 +89,7 @@ export default async function links(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ response: "Method not allowed." });
   }
 }
+
+export default process.env.DEBUG_API === "true"
+  ? withDebugLogging(linksHandler)
+  : linksHandler;

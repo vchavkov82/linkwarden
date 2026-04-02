@@ -89,7 +89,7 @@ dotenv -f .env.dev run -- sh -c 'yarn concurrently \
 """
 
 [tasks."dev:debug"]
-description = "Start dev server with API debug logging (low noise)"
+description = "Start dev with DEBUG_API: log every /api request + body/response on links & search"
 depends = ["dev:start", "kill"]
 run = """
 dotenv -f .env.dev run -- sh -c 'DEBUG_API=true yarn concurrently \

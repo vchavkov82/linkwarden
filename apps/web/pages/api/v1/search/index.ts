@@ -2,15 +2,12 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import searchLinks from "@/lib/api/controllers/search/searchLinks";
 import { LinkRequestQuery } from "@linkwarden/types/global";
 import verifyUser from "@/lib/api/verifyUser";
+import { withDebugLogging } from "@/lib/api/debugLogger";
 
-export default async function search(
+async function searchHandler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (process.env.DEBUG_API === "true") {
-    console.log(`[SEARCH-DEBUG] ${req.method} ${req.url} | referer=${req.headers.referer ?? "none"} | cookie=${req.headers.cookie ? "present" : "absent"}`);
-  }
-
   const user = await verifyUser({ req, res });
   if (!user) return;
 
@@ -40,3 +37,7 @@ export default async function search(
     return res.status(statusCode).json(data);
   }
 }
+
+export default process.env.DEBUG_API === "true"
+  ? withDebugLogging(searchHandler)
+  : searchHandler;
