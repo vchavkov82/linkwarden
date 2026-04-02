@@ -15,6 +15,7 @@ services:
       start_period: 10s
   linkwarden:
     env_file: .env
+    # Overrides DATABASE_URL from .env: host "postgres" only works between Compose services.
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
     restart: always
