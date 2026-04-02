@@ -42,11 +42,6 @@ const nextConfig = {
       fs: false,
     };
 
-    config.watchOptions = {
-      ...config.watchOptions,
-      ignored: ["**/pgdata/**", "**/node_modules/**"],
-    };
-
     return config;
   },
 };
