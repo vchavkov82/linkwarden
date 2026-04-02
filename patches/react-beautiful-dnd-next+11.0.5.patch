@@ -1,0 +1,75 @@
+diff --git a/node_modules/react-beautiful-dnd-next/dist/react-beautiful-dnd.cjs.js b/node_modules/react-beautiful-dnd-next/dist/react-beautiful-dnd.cjs.js
+index 67e1ebc..e89db7c 100644
+--- a/node_modules/react-beautiful-dnd-next/dist/react-beautiful-dnd.cjs.js
++++ b/node_modules/react-beautiful-dnd-next/dist/react-beautiful-dnd.cjs.js
+@@ -6376,12 +6376,14 @@ var defaultProps = {
+   isCombineEnabled: false,
+   ignoreContainerClipping: false
+ };
+-var ConnectedDroppable = reactRedux.connect(makeMapStateToProps, mapDispatchToProps, null, {
++var mergeDroppableProps = function mergeDroppableProps(stateProps, dispatchProps, ownProps) {
++  return Object.assign({}, defaultProps, ownProps, stateProps, dispatchProps);
++};
++var ConnectedDroppable = reactRedux.connect(makeMapStateToProps, mapDispatchToProps, mergeDroppableProps, {
+   context: StoreContext,
+   pure: true,
+   areStatePropsEqual: isStrictEqual
+ })(Droppable);
+-ConnectedDroppable.defaultProps = defaultProps;
+ 
+ var zIndexOptions = {
+   dragging: 5000,
+@@ -8076,12 +8078,14 @@ var defaultProps$1 = {
+   disableInteractiveElementBlocking: false,
+   shouldRespectForcePress: false
+ };
+-var ConnectedDraggable = reactRedux.connect(makeMapStateToProps$1, mapDispatchToProps$1, null, {
++var mergeDraggableProps = function mergeDraggableProps(stateProps, dispatchProps, ownProps) {
++  return Object.assign({}, defaultProps$1, ownProps, stateProps, dispatchProps);
++};
++var ConnectedDraggable = reactRedux.connect(makeMapStateToProps$1, mapDispatchToProps$1, mergeDraggableProps, {
+   context: StoreContext,
+   pure: true,
+   areStatePropsEqual: isStrictEqual
+ })(Draggable);
+-ConnectedDraggable.defaultProps = defaultProps$1;
+ 
+ exports.DragDropContext = DragDropContext;
+ exports.Draggable = ConnectedDraggable;
+diff --git a/node_modules/react-beautiful-dnd-next/dist/react-beautiful-dnd.esm.js b/node_modules/react-beautiful-dnd-next/dist/react-beautiful-dnd.esm.js
+index 06657c0..009d86d 100644
+--- a/node_modules/react-beautiful-dnd-next/dist/react-beautiful-dnd.esm.js
++++ b/node_modules/react-beautiful-dnd-next/dist/react-beautiful-dnd.esm.js
+@@ -6369,12 +6369,14 @@ var defaultProps = {
+   isCombineEnabled: false,
+   ignoreContainerClipping: false
+ };
+-var ConnectedDroppable = connect(makeMapStateToProps, mapDispatchToProps, null, {
++var mergeDroppableProps = function mergeDroppableProps(stateProps, dispatchProps, ownProps) {
++  return Object.assign({}, defaultProps, ownProps, stateProps, dispatchProps);
++};
++var ConnectedDroppable = connect(makeMapStateToProps, mapDispatchToProps, mergeDroppableProps, {
+   context: StoreContext,
+   pure: true,
+   areStatePropsEqual: isStrictEqual
+ })(Droppable);
+-ConnectedDroppable.defaultProps = defaultProps;
+ 
+ var zIndexOptions = {
+   dragging: 5000,
+@@ -8069,11 +8071,13 @@ var defaultProps$1 = {
+   disableInteractiveElementBlocking: false,
+   shouldRespectForcePress: false
+ };
+-var ConnectedDraggable = connect(makeMapStateToProps$1, mapDispatchToProps$1, null, {
++var mergeDraggableProps = function mergeDraggableProps(stateProps, dispatchProps, ownProps) {
++  return Object.assign({}, defaultProps$1, ownProps, stateProps, dispatchProps);
++};
++var ConnectedDraggable = connect(makeMapStateToProps$1, mapDispatchToProps$1, mergeDraggableProps, {
+   context: StoreContext,
+   pure: true,
+   areStatePropsEqual: isStrictEqual
+ })(Draggable);
+-ConnectedDraggable.defaultProps = defaultProps$1;
+ 
+ export { DragDropContext, ConnectedDraggable as Draggable, ConnectedDroppable as Droppable, resetServerContext };
