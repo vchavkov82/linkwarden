@@ -13,11 +13,12 @@ export default function LinksScreen() {
     id: string;
   }>();
 
-  const { links, data } = useLinks(
+  const { links, data, omitMedia } = useLinks(
     {
       sort: 0,
       searchQueryString: decodeURIComponent(search ?? ""),
       collectionId: Number(id),
+      omitMedia: true,
     },
     auth
   );
@@ -52,7 +53,7 @@ export default function LinksScreen() {
       collapsable={false}
       collapsableChildren={false}
     >
-      <Links links={links} data={data} />
+      <Links links={links} data={data} omitMedia={omitMedia} />
     </View>
   );
 }

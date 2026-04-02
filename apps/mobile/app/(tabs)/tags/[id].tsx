@@ -3,7 +3,7 @@ import { View, StyleSheet, Platform } from "react-native";
 import useAuthStore from "@/store/auth";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect } from "react";
-import { useTag } from "@linkwarden/router/tags";
+import { useTags } from "@linkwarden/router/tags";
 import Links from "@/components/Links";
 
 export default function LinksScreen() {
@@ -12,37 +12,32 @@ export default function LinksScreen() {
     search?: string;
     id: string;
   }>();
-  const parsedTagId = Number(id);
-  const tagId =
-    Number.isFinite(parsedTagId) && parsedTagId > 0 ? parsedTagId : undefined;
 
-  const { links, data } = useLinks(
+  const { links, data, omitMedia } = useLinks(
     {
       sort: 0,
       searchQueryString: decodeURIComponent(search ?? ""),
-      tagId,
+      tagId: Number(id),
+      omitMedia: true,
     },
     auth
   );
 
-  const tag = useTag(tagId, auth);
+  const tags = useTags(auth);
 
   const navigation = useNavigation();
-  const isIOS26Plus = Platform.OS === "ios" && Number(Platform.Version) >= 26;
 
   useEffect(() => {
-    if (tag.data?.name)
+    const activeTag = tags.data?.filter((e) => e.id === Number(id))[0];
+
+    if (activeTag?.name)
       navigation?.setOptions?.({
-        headerTitle: tag.data.name,
+        headerTitle: activeTag?.name,
         headerSearchBarOptions: {
-          placeholder: `Search ${tag.data.name}`,
-          ...(isIOS26Plus && {
-            allowToolbarIntegration: false,
-            placement: "integratedButton",
-          }),
+          placeholder: `Search ${activeTag.name}`,
         },
       });
-  }, [navigation, tag.data?.name, isIOS26Plus]);
+  }, [navigation]);
 
   return (
     <View
@@ -51,7 +46,7 @@ export default function LinksScreen() {
       collapsable={false}
       collapsableChildren={false}
     >
-      <Links links={links} data={data} />
+      <Links links={links} data={data} omitMedia={omitMedia} />
     </View>
   );
 }

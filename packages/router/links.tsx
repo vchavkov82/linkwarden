@@ -38,6 +38,7 @@ const useLinks = (params: LinkRequestQuery = {}, auth?: MobileAuth) => {
       tagId: params.tagId,
       pinnedOnly: params.pinnedOnly ?? undefined,
       searchQueryString: params.searchQueryString,
+      omitMedia: params.omitMedia ? true : undefined,
     });
   }, [
     sort,
@@ -45,6 +46,7 @@ const useLinks = (params: LinkRequestQuery = {}, auth?: MobileAuth) => {
     params.tagId,
     params.pinnedOnly,
     params.searchQueryString,
+    params.omitMedia,
   ]);
 
   const query = useFetchLinks(queryString, auth);
@@ -56,6 +58,7 @@ const useLinks = (params: LinkRequestQuery = {}, auth?: MobileAuth) => {
   return {
     links,
     data: query,
+    omitMedia: Boolean(params.omitMedia),
   };
 };
 
@@ -116,14 +119,15 @@ const buildQueryString = (params: LinkRequestQuery) => {
   return Object.keys(params)
     .filter((key) => {
       const val = params[key as keyof LinkRequestQuery];
-      return val !== undefined && val !== null && val !== "";
+      if (val === undefined || val === null || val === "") return false;
+      if (typeof val === "boolean") return val;
+      return true;
     })
-    .map(
-      (key) =>
-        `${encodeURIComponent(key)}=${encodeURIComponent(
-          params[key as keyof LinkRequestQuery] as string
-        )}`
-    )
+    .map((key) => {
+      const val = params[key as keyof LinkRequestQuery];
+      const str = typeof val === "boolean" ? String(val) : String(val);
+      return `${encodeURIComponent(key)}=${encodeURIComponent(str)}`;
+    })
     .join("&");
 };
 

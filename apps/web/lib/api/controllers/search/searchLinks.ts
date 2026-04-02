@@ -7,6 +7,13 @@ import {
   parseSearchTokens,
 } from "../../searchQueryBuilder";
 
+function stripMediaFieldsFromLinks<
+  T extends { preview?: string | null; image?: string | null },
+>(links: T[], omitMedia?: boolean): T[] {
+  if (!omitMedia) return links;
+  return links.map((link) => ({ ...link, preview: null, image: null }));
+}
+
 interface SearchLinksParams {
   query: LinkRequestQuery;
   userId?: number;
@@ -143,7 +150,7 @@ export default async function searchLinks({
 
     return {
       data: {
-        links,
+        links: stripMediaFieldsFromLinks(links, query.omitMedia),
         nextCursor,
       },
       statusCode: 200,
@@ -243,7 +250,7 @@ export default async function searchLinks({
 
   return {
     data: {
-      links,
+      links: stripMediaFieldsFromLinks(links, query.omitMedia),
       nextCursor:
         links.length === paginationTakeCount
           ? links[links.length - 1].id

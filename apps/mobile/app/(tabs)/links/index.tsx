@@ -9,10 +9,11 @@ export default function LinksScreen() {
   const { auth } = useAuthStore();
   const { search } = useLocalSearchParams<{ search?: string }>();
 
-  const { links, data } = useLinks(
+  const { links, data, omitMedia } = useLinks(
     {
       sort: 0,
       searchQueryString: decodeURIComponent(search ?? ""),
+      omitMedia: true,
     },
     auth
   );
@@ -24,7 +25,7 @@ export default function LinksScreen() {
       collapsable={false}
       collapsableChildren={false}
     >
-      <Links links={links} data={data} />
+      <Links links={links} data={data} omitMedia={omitMedia} />
     </View>
   );
 }

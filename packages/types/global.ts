@@ -109,6 +109,8 @@ export type LinkRequestQuery = {
   tagId?: number;
   pinnedOnly?: boolean;
   searchQueryString?: string;
+  /** When true, API clears preview/image path fields on each link (lighter sync payloads). */
+  omitMedia?: boolean;
 };
 
 export type TagRequestQuery = {

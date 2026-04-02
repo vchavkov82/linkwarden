@@ -31,6 +31,7 @@ import { CalendarDays, Folder } from "lucide-react-native";
 import useDataStore from "@/store/data";
 import { useEffect, useState } from "react";
 import { deleteLinkCache } from "@/lib/cache";
+import { useLinkPreviewThumbContext } from "./LinkPreviewThumbContext";
 
 type Props = {
   link: LinkIncludingShortenedCollectionAndTags;
@@ -46,6 +47,12 @@ const LinkListing = ({ link, dashboard }: Props) => {
   const { data } = useDataStore();
 
   const deleteLink = useDeleteLink({ auth, Alert });
+
+  const { deferArchiveThumbnails, isArchiveThumbReady } =
+    useLinkPreviewThumbContext();
+  const thumbAllowed =
+    !deferArchiveThumbnails ||
+    (link.id != null && isArchiveThumbReady(link.id));
 
   const [url, setUrl] = useState("");
 
@@ -136,16 +143,23 @@ const LinkListing = ({ link, dashboard }: Props) => {
 
             <View className="flex-col items-end">
               <View className="rounded-lg overflow-hidden relative">
-                {formatAvailable(link, "preview") ? (
-                  <Image
-                    source={{
-                      uri: `${auth.instance}/api/v1/archives/${link.id}?format=${ArchivedFormat.jpeg}&preview=true&updatedAt=${link.updatedAt}`,
-                      headers: {
-                        Authorization: `Bearer ${auth.session}`,
-                      },
-                    }}
-                    className="rounded-md h-[60px] w-[90px] object-cover scale-105"
-                  />
+                {link.preview === "unavailable" ? (
+                  <View className="h-[60px] w-[90px]" />
+                ) : formatAvailable(link, "preview") ||
+                  (link.type === "url" && link.id) ? (
+                  !thumbAllowed ? (
+                    <View className="rounded-md h-[60px] w-[90px] bg-base-300" />
+                  ) : (
+                    <Image
+                      source={{
+                        uri: `${auth.instance}/api/v1/archives/${link.id}?format=${ArchivedFormat.jpeg}&preview=true&updatedAt=${link.updatedAt}`,
+                        headers: {
+                          Authorization: `Bearer ${auth.session}`,
+                        },
+                      }}
+                      className="rounded-md h-[60px] w-[90px] object-cover scale-105"
+                    />
+                  )
                 ) : !link.preview ? (
                   <ActivityIndicator
                     size="small"

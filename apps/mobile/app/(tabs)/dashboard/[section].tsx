@@ -45,12 +45,13 @@ export default function LinksScreen() {
     });
   }, [title, navigation]);
 
-  const { links, data } = useLinks(
+  const { links, data, omitMedia } = useLinks(
     {
       sort: 0,
       searchQueryString: decodeURIComponent(search ?? ""),
       collectionId: Number(collectionId),
       pinnedOnly: section === "pinned-links",
+      omitMedia: true,
     },
     auth
   );
@@ -62,7 +63,7 @@ export default function LinksScreen() {
       collapsable={false}
       collapsableChildren={false}
     >
-      <Links links={links} data={data} />
+      <Links links={links} data={data} omitMedia={omitMedia} />
     </View>
   );
 }

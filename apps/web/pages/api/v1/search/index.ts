@@ -29,6 +29,7 @@ export default async function search(
       searchQueryString: req.query.searchQueryString
         ? (req.query.searchQueryString as string)
         : undefined,
+      omitMedia: req.query.omitMedia === "true" ? true : undefined,
     };
 
     const { statusCode, ...data } = await searchLinks({

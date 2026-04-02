@@ -1,5 +1,4 @@
 import {
-  ArchivedFormat,
   CollectionIncludingMembersAndLinkCount,
   LinkIncludingShortenedCollectionAndTags,
 } from "@linkwarden/types/global";
@@ -8,11 +7,11 @@ import unescapeString from "@/lib/client/unescapeString";
 import LinkActions from "@/components/LinkViews/LinkComponents/LinkActions";
 import LinkDate from "@/components/LinkViews/LinkComponents/LinkDate";
 import LinkCollection from "@/components/LinkViews/LinkComponents/LinkCollection";
-import Image from "next/image";
 import {
   atLeastOneFormatAvailable,
   formatAvailable,
 } from "@linkwarden/lib/formatStats";
+import LazyLinkPreview from "./LazyLinkPreview";
 import Link from "next/link";
 import LinkIcon from "./LinkIcon";
 import toast from "react-hot-toast";
@@ -98,19 +97,12 @@ function LinkMasonry({
             <div>
               <div className="relative rounded-t-xl overflow-hidden">
                 {formatAvailable(link, "preview") ? (
-                  <Image
-                    src={`/api/v1/archives/${link.id}?format=${ArchivedFormat.jpeg}&preview=true&updatedAt=${link.updatedAt}`}
-                    width={1280}
-                    height={720}
-                    alt=""
-                    className={`rounded-t-xl select-none object-cover z-10 ${imageHeightClass} w-full shadow opacity-80 scale-105`}
-                    style={show.icon ? { filter: "blur(1px)" } : undefined}
-                    draggable="false"
-                    onError={(e) => {
-                      const target = e.target as HTMLElement;
-                      target.style.display = "none";
-                    }}
-                    unoptimized
+                  <LazyLinkPreview
+                    linkId={link.id as number}
+                    updatedAt={link.updatedAt}
+                    imageHeightClass={imageHeightClass}
+                    iconBlur={show.icon}
+                    imageClassName={`rounded-t-xl select-none object-cover z-10 ${imageHeightClass} w-full shadow opacity-80 scale-105`}
                   />
                 ) : link.preview === "unavailable" ? null : (
                   <div
