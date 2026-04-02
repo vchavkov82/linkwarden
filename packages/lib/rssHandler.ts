@@ -5,16 +5,21 @@ import { prisma } from "@linkwarden/prisma";
 import { withRetry } from "./withRetry";
 import { normalizeUrl } from "./normalizeUrl";
 
+type ParsedFeed = Awaited<ReturnType<Parser["parseURL"]>>;
+
 export const rssHandler = async (
   rssSubscription: RssSubscription,
-  parser: Parser
+  parserOrFeed: Parser | ParsedFeed
 ) => {
   try {
-    const feed = await parser.parseURL(rssSubscription.url);
+    const feed =
+      "parseURL" in parserOrFeed
+        ? await parserOrFeed.parseURL(rssSubscription.url)
+        : parserOrFeed;
 
     const feedLastPubDate =
       feed.lastBuildDate ??
-      feed.items.reduce((acc, item) => {
+      feed.items.reduce((acc: Date, item: ParsedFeed["items"][number]) => {
         const itemPubDate = item.pubDate ? new Date(item.pubDate) : null;
         return itemPubDate && itemPubDate > acc ? itemPubDate : acc;
       }, new Date(0));
@@ -34,10 +39,12 @@ export const rssHandler = async (
         `Processing new RSS feed items for ${rssSubscription.name}`
       );
 
-      const newItems = feed.items.filter((item) => {
-        const itemPubDate = item.pubDate ? new Date(item.pubDate) : null;
-        return itemPubDate && itemPubDate > rssSubscription.lastBuildDate!;
-      });
+      const newItems = feed.items.filter(
+        (item: ParsedFeed["items"][number]) => {
+          const itemPubDate = item.pubDate ? new Date(item.pubDate) : null;
+          return itemPubDate && itemPubDate > rssSubscription.lastBuildDate!;
+        }
+      );
 
       const hasTooManyLinks = await hasPassedLimit(
         rssSubscription.ownerId,

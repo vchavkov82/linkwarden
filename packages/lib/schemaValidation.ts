@@ -295,6 +295,7 @@ export type PostHighlightSchemaType = z.infer<typeof PostHighlightSchema>;
 
 export const LinkArchiveActionSchema = z.object({
   linkIds: z.array(z.number()).optional(),
+  action: z.enum(["allAndIgnore", "allAndRePreserve", "allBroken"]).optional(),
 });
 
 export type LinkArchiveActionSchemaType = z.infer<
