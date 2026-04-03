@@ -147,6 +147,12 @@ export const PostLinkSchema = z.object({
 
 export type PostLinkSchemaType = z.infer<typeof PostLinkSchema>;
 
+export const PostLinksBulkSchema = z.object({
+  links: z.array(PostLinkSchema).min(1).max(100),
+});
+
+export type PostLinksBulkSchemaType = z.infer<typeof PostLinksBulkSchema>;
+
 export const UpdateLinkSchema = z.object({
   id: z.number(),
   name: z.string().trim().max(2048).nullish(),

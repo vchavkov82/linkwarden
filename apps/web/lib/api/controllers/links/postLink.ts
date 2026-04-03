@@ -34,11 +34,20 @@ export default async function postLink(
   if (!linkCollection)
     return { response: "Collection is not accessible.", status: 400 };
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-  });
+  // Normalize URL early so we can check for duplicates before the expensive title fetch
+  const normalized = normalizeUrl(link.url);
+
+  // Early duplicate check — skip fetchTitleAndHeaders entirely if URL already exists
+  if (normalized) {
+    const existingLink = await prisma.link.findFirst({
+      where: { url: normalized, ownerId: linkCollection.ownerId },
+      include: { tags: true, collection: true },
+    });
+
+    if (existingLink) {
+      return { response: existingLink, status: 200 };
+    }
+  }
 
   const hasTooManyLinks = await hasPassedLimit(userId, 1);
 
@@ -70,32 +79,14 @@ export default async function postLink(
 
   if (!link.tags) link.tags = [];
 
-  const checkDuplicates = user?.preventDuplicateLinks && link.url;
-
-  const normalized = normalizeUrl(link.url);
-
-  let result!: { duplicate: boolean; link: any };
+  let newLink;
 
   try {
-    result = await withRetry(
+    newLink = await withRetry(
       async () => {
         return await prisma.$transaction(
           async (tx) => {
-            if (checkDuplicates && normalized) {
-              const existingLink = await tx.link.findFirst({
-                where: {
-                  url: normalized,
-                  ownerId: linkCollection.ownerId,
-                },
-                select: { id: true },
-              });
-
-              if (existingLink) {
-                return { duplicate: true as const, link: null };
-              }
-            }
-
-            const newLink = await tx.link.create({
+            const created = await tx.link.create({
               data: {
                 url: normalized || null,
                 name,
@@ -138,7 +129,7 @@ export default async function postLink(
               include: { tags: true, collection: true },
             });
 
-            return { duplicate: false as const, link: newLink };
+            return created;
           },
           { isolationLevel: "Serializable" }
         );
@@ -147,22 +138,16 @@ export default async function postLink(
       ["P2034"]
     );
   } catch (error: any) {
+    // Race condition: another request created the same link between our check and insert
     if (error?.code === "P2002") {
-      result = { duplicate: true, link: null };
-    } else {
-      throw error;
+      const existingLink = await prisma.link.findFirst({
+        where: { url: normalized, ownerId: linkCollection.ownerId },
+        include: { tags: true, collection: true },
+      });
+      return { response: existingLink, status: 200 };
     }
+    throw error;
   }
-
-  if (result.duplicate) {
-    const existingLink = await prisma.link.findFirst({
-      where: { url: normalized, ownerId: linkCollection.ownerId },
-      include: { tags: true, collection: true },
-    });
-    return { response: existingLink, status: 200 };
-  }
-
-  const newLink = result.link!;
 
   await prisma.link.update({
     where: { id: newLink.id },
