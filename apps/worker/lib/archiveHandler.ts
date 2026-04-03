@@ -67,6 +67,7 @@ export default async function archiveHandler(
             ? true
             : undefined,
         indexVersion: null,
+        needsTitleFetch: false,
       },
     });
     return;
@@ -166,11 +167,20 @@ export default async function archiveHandler(
             return description?.getAttribute("content") ?? undefined;
           });
 
+          // Extract page title for bulk-created links that deferred title fetching
+          const pageTitle = await page.title();
+          const shouldFillTitle =
+            link.needsTitleFetch && (!link.name || link.name === "") && pageTitle;
+
           await prisma.link.update({
             where: { id: link.id },
             data: {
               metaDescription:
                 metaDescription?.trim().slice(0, 500) ?? undefined,
+              ...(shouldFillTitle && {
+                name: pageTitle.trim().slice(0, 2048),
+              }),
+              needsTitleFetch: false,
             },
           });
 

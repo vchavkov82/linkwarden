@@ -1178,9 +1178,67 @@ const resetInfiniteQueryPagination = async (
   await queryClient.invalidateQueries(queryKey);
 };
 
+const useBulkAddLinks = ({
+  auth,
+  toast,
+  t,
+}: {
+  auth?: MobileAuth;
+  toast?: typeof toaster;
+  t?: TFunction;
+}) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (links: PostLinkSchemaType[]) => {
+      const response = await fetch(
+        (auth?.instance ? auth?.instance : "") + "/api/v1/links",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(auth?.session
+              ? { Authorization: `Bearer ${auth.session}` }
+              : {}),
+          },
+          body: JSON.stringify({ links }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.response);
+
+      return data.response as {
+        created: LinkIncludingShortenedCollectionAndTags[];
+        existing: LinkIncludingShortenedCollectionAndTags[];
+        errors: { index: number; url?: string; error: string }[];
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["links"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+
+      const successMsg = t
+        ? t("links_synced_successfully")
+        : "Links synced successfully.";
+      toast?.success(successMsg);
+    },
+    onError: (error: Error) => {
+      const errMsg = t
+        ? t(error.message) || error.message
+        : error.message;
+      toast?.error(errMsg);
+    },
+  });
+};
+
 export {
   useLinks,
   useAddLink,
+  useBulkAddLinks,
   useUpdateLink,
   useDeleteLink,
   useBulkDeleteLinks,

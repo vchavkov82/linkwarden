@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import getLinks from "@/lib/api/controllers/links/getLinks";
 import postLink from "@/lib/api/controllers/links/postLink";
+import postLinksBulk from "@/lib/api/controllers/links/bulk/postLinksBulk";
 import { LinkRequestQuery } from "@linkwarden/types/global";
 import verifyUser from "@/lib/api/verifyUser";
 import deleteLinksById from "@/lib/api/controllers/links/bulk/deleteLinksById";
@@ -36,6 +37,11 @@ async function linksHandler(req: NextApiRequest, res: NextApiResponse) {
         response:
           "This action is disabled because this is a read-only demo of Linkwarden.",
       });
+
+    if (Array.isArray(req.body.links)) {
+      const result = await postLinksBulk(req.body, user.id);
+      return res.status(result.status).json({ response: result.response });
+    }
 
     const newlink = await postLink(req.body, user.id);
     return res.status(newlink.status).json({
