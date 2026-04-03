@@ -148,16 +148,18 @@ export default async function postLink(
     );
   } catch (error: any) {
     if (error?.code === "P2002") {
-      return { response: "Link already exists", status: 409 };
+      result = { duplicate: true, link: null };
+    } else {
+      throw error;
     }
-    throw error;
   }
 
   if (result.duplicate) {
-    return {
-      response: "Link already exists",
-      status: 409,
-    };
+    const existingLink = await prisma.link.findFirst({
+      where: { url: normalized, ownerId: linkCollection.ownerId },
+      include: { tags: true, collection: true },
+    });
+    return { response: existingLink, status: 200 };
   }
 
   const newLink = result.link!;
