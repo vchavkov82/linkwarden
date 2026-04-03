@@ -74,75 +74,84 @@ export default async function postLink(
 
   const normalized = normalizeUrl(link.url);
 
-  const result = await withRetry(
-    async () => {
-      return await prisma.$transaction(
-        async (tx) => {
-          if (checkDuplicates && normalized) {
-            const existingLink = await tx.link.findFirst({
-              where: {
-                url: normalized,
-                ownerId: linkCollection.ownerId,
-              },
-              select: { id: true },
-            });
+  let result!: { duplicate: boolean; link: any };
 
-            if (existingLink) {
-              return { duplicate: true as const, link: null };
+  try {
+    result = await withRetry(
+      async () => {
+        return await prisma.$transaction(
+          async (tx) => {
+            if (checkDuplicates && normalized) {
+              const existingLink = await tx.link.findFirst({
+                where: {
+                  url: normalized,
+                  ownerId: linkCollection.ownerId,
+                },
+                select: { id: true },
+              });
+
+              if (existingLink) {
+                return { duplicate: true as const, link: null };
+              }
             }
-          }
 
-          const newLink = await tx.link.create({
-            data: {
-              url: normalized || null,
-              name,
-              description: link.description,
-              type: linkType,
-              createdBy: {
-                connect: {
-                  id: userId,
-                },
-              },
-              owner: {
-                connect: {
-                  id: linkCollection.ownerId,
-                },
-              },
-              collection: {
-                connect: {
-                  id: linkCollection.id,
-                },
-              },
-              tags: {
-                connectOrCreate: link.tags?.map((tag) => ({
-                  where: {
-                    name_ownerId: {
-                      name: tag.name.trim(),
-                      ownerId: linkCollection.ownerId,
-                    },
+            const newLink = await tx.link.create({
+              data: {
+                url: normalized || null,
+                name,
+                description: link.description,
+                type: linkType,
+                createdBy: {
+                  connect: {
+                    id: userId,
                   },
-                  create: {
-                    name: tag.name.trim(),
-                    owner: {
-                      connect: {
-                        id: linkCollection.ownerId,
+                },
+                owner: {
+                  connect: {
+                    id: linkCollection.ownerId,
+                  },
+                },
+                collection: {
+                  connect: {
+                    id: linkCollection.id,
+                  },
+                },
+                tags: {
+                  connectOrCreate: link.tags?.map((tag) => ({
+                    where: {
+                      name_ownerId: {
+                        name: tag.name.trim(),
+                        ownerId: linkCollection.ownerId,
                       },
                     },
-                  },
-                })),
+                    create: {
+                      name: tag.name.trim(),
+                      owner: {
+                        connect: {
+                          id: linkCollection.ownerId,
+                        },
+                      },
+                    },
+                  })),
+                },
               },
-            },
-            include: { tags: true, collection: true },
-          });
+              include: { tags: true, collection: true },
+            });
 
-          return { duplicate: false as const, link: newLink };
-        },
-        { isolationLevel: "Serializable" }
-      );
-    },
-    5,
-    ["P2034"]
-  );
+            return { duplicate: false as const, link: newLink };
+          },
+          { isolationLevel: "Serializable" }
+        );
+      },
+      5,
+      ["P2034"]
+    );
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return { response: "Link already exists", status: 409 };
+    }
+    throw error;
+  }
 
   if (result.duplicate) {
     return {
