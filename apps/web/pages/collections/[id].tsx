@@ -37,12 +37,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { NextPageWithLayout } from "../_app";
+import { useCollectionsLayout } from "@/hooks/useCollectionsLayout";
+import CollectionsViewToggle from "@/components/CollectionsViewToggle";
 
 const Page: NextPageWithLayout = () => {
   const { t } = useTranslation();
   const router = useRouter();
 
   const { data: collections = [] } = useCollections();
+  const [collectionsLayout, setCollectionsLayout] = useCollectionsLayout();
 
   const [sortBy, setSortBy] = useState<Sort>(
     Number(localStorage.getItem("sortBy")) ?? Sort.DateNewestFirst
@@ -281,27 +284,43 @@ const Page: NextPageWithLayout = () => {
 
       {collections.some((e) => e.parentId === activeCollection?.id) && (
         <>
-          <PageHeader
-            icon="bi-folder"
-            title={t("collections")}
-            description={t(
-              collections.filter((e) => e.parentId === activeCollection?.id)
-                .length === 1
-                ? "showing_count_result"
-                : "showing_count_results",
-              {
-                count: collections.filter(
-                  (e) => e.parentId === activeCollection?.id
-                ).length,
-              }
-            )}
-            className="scale-90 w-fit"
-          />
-          <div className="grid 2xl:grid-cols-4 xl:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <PageHeader
+              icon="bi-folder"
+              title={t("collections")}
+              description={t(
+                collections.filter((e) => e.parentId === activeCollection?.id)
+                  .length === 1
+                  ? "showing_count_result"
+                  : "showing_count_results",
+                {
+                  count: collections.filter(
+                    (e) => e.parentId === activeCollection?.id
+                  ).length,
+                }
+              )}
+              className="scale-90 w-fit"
+            />
+            <CollectionsViewToggle
+              layout={collectionsLayout}
+              setLayout={setCollectionsLayout}
+            />
+          </div>
+          <div
+            className={
+              collectionsLayout === "list"
+                ? "flex flex-col gap-1 w-full max-w-4xl"
+                : "grid 2xl:grid-cols-4 xl:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-5"
+            }
+          >
             {collections
               .filter((e) => e.parentId === activeCollection?.id)
               .map((e) => (
-                <CollectionCard key={e.id} collection={e} />
+                <CollectionCard
+                  key={e.id}
+                  collection={e}
+                  variant={collectionsLayout === "list" ? "list" : "card"}
+                />
               ))}
           </div>
         </>

@@ -20,11 +20,16 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
+import Icon from "@/components/Icon";
+import { IconWeight } from "@phosphor-icons/react";
+import { cn } from "@linkwarden/lib";
 
 export default function CollectionCard({
   collection,
+  variant = "card",
 }: {
   collection: CollectionIncludingMembersAndLinkCount;
+  variant?: "card" | "list";
 }) {
   const { t } = useTranslation();
   const { data: user } = useUser();
@@ -63,75 +68,105 @@ export default function CollectionCard({
     };
 
     fetchOwner();
-  }, [collection]);
+  }, [collection, user?.id]);
 
   const [editCollectionModal, setEditCollectionModal] = useState(false);
   const [editCollectionSharingModal, setEditCollectionSharingModal] =
     useState(false);
   const [deleteCollectionModal, setDeleteCollectionModal] = useState(false);
 
-  return (
-    <div className="relative">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-3 right-3 z-20"
-          >
-            <i title="More" className="bi-three-dots text-xl text-neutral" />
-          </Button>
-        </DropdownMenuTrigger>
-
-        <DropdownMenuContent
-          sideOffset={4}
-          side="bottom"
-          align="end"
-          className="z-[30]"
-        >
-          {permissions === true && (
-            <DropdownMenuItem onSelect={() => setEditCollectionModal(true)}>
-              <i className="bi-pencil-square" />
-              {t("edit_collection_info")}
-            </DropdownMenuItem>
+  const menu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "z-20",
+            variant === "list"
+              ? "absolute top-1.5 right-2 h-8 w-8"
+              : "absolute top-3 right-3"
           )}
+        >
+          <i title="More" className="bi-three-dots text-xl text-neutral" />
+        </Button>
+      </DropdownMenuTrigger>
 
-          <DropdownMenuItem
-            onSelect={() => setEditCollectionSharingModal(true)}
-          >
-            <i className="bi-globe" />
-            {permissions === true ? t("share_and_collaborate") : t("view_team")}
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem
-            onSelect={() => setDeleteCollectionModal(true)}
-            className="text-error"
-          >
-            {permissions === true ? (
-              <>
-                <i className="bi-trash" />
-                {t("delete_collection")}
-              </>
-            ) : (
-              <>
-                <i className="bi-box-arrow-left" />
-                {t("leave_collection")}
-              </>
-            )}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <div
-        className="flex items-center absolute bottom-3 left-3 z-10 px-1 py-1 rounded-full cursor-pointer hover:bg-base-content/20 transition-colors duration-200"
-        onClick={() => setEditCollectionSharingModal(true)}
+      <DropdownMenuContent
+        sideOffset={4}
+        side="bottom"
+        align="end"
+        className="z-[30]"
       >
+        {permissions === true && (
+          <DropdownMenuItem onSelect={() => setEditCollectionModal(true)}>
+            <i className="bi-pencil-square" />
+            {t("edit_collection_info")}
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuItem
+          onSelect={() => setEditCollectionSharingModal(true)}
+        >
+          <i className="bi-globe" />
+          {permissions === true ? t("share_and_collaborate") : t("view_team")}
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onSelect={() => setDeleteCollectionModal(true)}
+          className="text-error"
+        >
+          {permissions === true ? (
+            <>
+              <i className="bi-trash" />
+              {t("delete_collection")}
+            </>
+          ) : (
+            <>
+              <i className="bi-box-arrow-left" />
+              {t("leave_collection")}
+            </>
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const modals = (
+    <>
+      {editCollectionModal && (
+        <EditCollectionModal
+          onClose={() => setEditCollectionModal(false)}
+          activeCollection={collection}
+        />
+      )}
+      {editCollectionSharingModal && (
+        <EditCollectionSharingModal
+          onClose={() => setEditCollectionSharingModal(false)}
+          activeCollection={collection}
+        />
+      )}
+      {deleteCollectionModal && (
+        <DeleteCollectionModal
+          onClose={() => setDeleteCollectionModal(false)}
+          activeCollection={collection}
+        />
+      )}
+    </>
+  );
+
+  const memberAvatars = (maxMemberFaces: number) => {
+    const compact = maxMemberFaces === 2;
+    const overflow = Math.max(0, collection.members.length - maxMemberFaces);
+    return (
+      <>
         {collectionOwner.id && (
           <ProfilePhoto
             src={collectionOwner.image || undefined}
             name={collectionOwner.name}
+            className={compact ? "!w-6 !h-6 [&_span]:!text-sm" : undefined}
           />
         )}
         {collection.members
@@ -142,18 +177,118 @@ export default function CollectionCard({
                 key={i}
                 src={e.user.image ? e.user.image : undefined}
                 name={e.user.name}
-                className="-ml-3"
+                className={cn(
+                  compact ? "!w-6 !h-6 [&_span]:!text-sm" : undefined,
+                  "-ml-3"
+                )}
               />
             );
           })
-          .slice(0, 3)}
-        {collection.members.length - 3 > 0 && (
-          <div className={`avatar drop-shadow-md placeholder -ml-3`}>
-            <div className="bg-base-100 text-neutral rounded-full w-8 h-8 ring-2 ring-neutral-content">
-              <span>+{collection.members.length - 3}</span>
+          .slice(0, maxMemberFaces)}
+        {overflow > 0 && (
+          <div
+            className={cn(
+              "avatar drop-shadow-md placeholder -ml-3",
+              compact && "!w-6 !h-6"
+            )}
+          >
+            <div
+              className={cn(
+                "bg-base-100 text-neutral rounded-full ring-2 ring-neutral-content flex items-center justify-center",
+                compact ? "w-6 h-6 text-[10px]" : "w-8 h-8"
+              )}
+            >
+              <span>+{overflow}</span>
             </div>
           </div>
         )}
+      </>
+    );
+  };
+
+  if (variant === "list") {
+    return (
+      <div className="relative flex items-stretch rounded-md border border-neutral-content bg-base-100/90 dark:bg-base-200/40 hover:bg-base-200/80 dark:hover:bg-base-200/70 duration-200 shadow-sm group">
+        {menu}
+        <div className="flex flex-1 min-w-0 items-center pr-11">
+          <Link
+            href={`/collections/${collection.id}`}
+            className="flex flex-1 min-w-0 items-center gap-2 py-2 pl-2 sm:pl-3 touch-manipulation"
+          >
+            <div
+              className="shrink-0 flex items-center justify-center w-9 h-9 rounded-md"
+              style={{
+                backgroundColor: `${collection.color}28`,
+              }}
+            >
+              {collection.icon ? (
+                <Icon
+                  icon={collection.icon}
+                  size={22}
+                  weight={(collection.iconWeight || "regular") as IconWeight}
+                  color={collection.color}
+                />
+              ) : (
+                <i
+                  className="bi-folder-fill text-lg"
+                  style={{ color: collection.color }}
+                />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold leading-snug">
+                {collection.name}
+              </p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[11px] leading-tight text-neutral">
+                {collection.isPublic && (
+                  <i
+                    className="bi-globe2 shrink-0"
+                    title={t("collection_publicly_shared")}
+                  />
+                )}
+                <span className="inline-flex items-center gap-0.5 shrink-0">
+                  <i className="bi-link-45deg" title={t("links")} />
+                  {collection._count?.links ?? 0}
+                </span>
+                <span className="inline-flex items-center gap-0.5 shrink-0">
+                  <i className="bi-calendar3" />
+                  {formattedDate}
+                </span>
+              </div>
+            </div>
+          </Link>
+          <div
+            className="hidden sm:flex items-center shrink-0 pl-1 pr-1 cursor-pointer rounded-md hover:bg-base-content/10 py-1"
+            onClick={(e) => {
+              e.preventDefault();
+              setEditCollectionSharingModal(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setEditCollectionSharingModal(true);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="flex items-center">{memberAvatars(2)}</div>
+          </div>
+        </div>
+        {modals}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {menu}
+
+      <div
+        className="flex items-center absolute bottom-3 left-3 z-10 px-1 py-1 rounded-full cursor-pointer hover:bg-base-content/20 transition-colors duration-200"
+        onClick={() => setEditCollectionSharingModal(true)}
+      >
+        {memberAvatars(3)}
       </div>
       <Link
         href={`/collections/${collection.id}`}
@@ -202,24 +337,7 @@ export default function CollectionCard({
           </div>
         </div>
       </Link>
-      {editCollectionModal && (
-        <EditCollectionModal
-          onClose={() => setEditCollectionModal(false)}
-          activeCollection={collection}
-        />
-      )}
-      {editCollectionSharingModal && (
-        <EditCollectionSharingModal
-          onClose={() => setEditCollectionSharingModal(false)}
-          activeCollection={collection}
-        />
-      )}
-      {deleteCollectionModal && (
-        <DeleteCollectionModal
-          onClose={() => setDeleteCollectionModal(false)}
-          activeCollection={collection}
-        />
-      )}
+      {modals}
     </div>
   );
 }

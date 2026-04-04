@@ -385,6 +385,8 @@
   "search": "Arama",
   "set_custom_icon": "Özel Simge Ayarla",
   "view": "Görünüm",
+  "collections_layout_list": "List layout",
+  "collections_layout_grid": "Grid layout",
   "show": "Göster",
   "image": "Resim",
   "icon": "Simge",

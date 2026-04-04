@@ -385,6 +385,8 @@
   "search": "搜尋",
   "set_custom_icon": "設定自訂圖示",
   "view": "檢視",
+  "collections_layout_list": "List layout",
+  "collections_layout_grid": "Grid layout",
   "show": "顯示",
   "image": "圖片",
   "icon": "圖示",

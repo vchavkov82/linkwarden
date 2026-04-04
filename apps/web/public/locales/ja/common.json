@@ -385,6 +385,8 @@
   "search": "検索",
   "set_custom_icon": "カスタムアイコンを設定",
   "view": "閲覧",
+  "collections_layout_list": "List layout",
+  "collections_layout_grid": "Grid layout",
   "show": "表示",
   "image": "画像",
   "icon": "アイコン",

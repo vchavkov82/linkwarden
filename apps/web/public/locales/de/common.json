@@ -385,6 +385,8 @@
   "search": "Suche",
   "set_custom_icon": "Benutzerdefiniertes Symbol festlegen",
   "view": "Ansicht",
+  "collections_layout_list": "List layout",
+  "collections_layout_grid": "Grid layout",
   "show": "anzeigen",
   "image": "Bild",
   "icon": "Symbol",
