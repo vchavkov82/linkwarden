@@ -2,3 +2,11 @@
 [    1690ms] [LOG] [HMR] connected @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:38
 [    3903ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
 [    5643ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://links.svc.assistance.bg/login:0
+[  749189ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  757890ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  802940ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  816834ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  819193ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  823129ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  824669ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  826121ms] [LOG] [Fast Refresh] done in 1452ms @ webpack-internal:///../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:190
