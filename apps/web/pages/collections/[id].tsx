@@ -108,7 +108,7 @@ const Page: NextPageWithLayout = () => {
   }, [router]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(
-    (localStorage.getItem("viewMode") as ViewMode) || ViewMode.Card
+    (localStorage.getItem("viewMode") as ViewMode) || ViewMode.List
   );
 
   return (

@@ -133,7 +133,7 @@ const Page: NextPageWithLayout = () => {
   };
 
   const [viewMode, setViewMode] = useState<ViewMode>(
-    (localStorage.getItem("viewMode") as ViewMode) || ViewMode.Card
+    (localStorage.getItem("viewMode") as ViewMode) || ViewMode.List
   );
 
   return (

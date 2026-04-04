@@ -210,12 +210,11 @@ function ListView({
       })}
 
       {(hasNextPage || isLoading) && (
-        <div ref={placeHolderRef} className="flex gap-2 py-2 px-1">
-          <div className="skeleton h-12 w-12"></div>
-          <div className="flex flex-col gap-3 w-full">
-            <div className="skeleton h-2 w-2/3"></div>
-            <div className="skeleton h-2 w-full"></div>
-            <div className="skeleton h-2 w-1/3"></div>
+        <div ref={placeHolderRef} className="flex gap-2 py-1 px-1">
+          <div className="skeleton h-9 w-9 shrink-0 rounded-md"></div>
+          <div className="flex flex-col gap-1.5 w-full min-w-0 py-0.5">
+            <div className="skeleton h-2.5 w-2/3"></div>
+            <div className="skeleton h-2 w-1/2"></div>
           </div>
         </div>
       )}
@@ -343,7 +342,7 @@ export default function Links({
       />
     );
   } else {
-    // Default to card view
+    // Default: card view (explicit layout or legacy)
     return (
       <CardView
         links={links || []}

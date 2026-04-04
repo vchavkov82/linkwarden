@@ -11,15 +11,22 @@ function LinkIcon({
   link,
   className,
   hideBackground,
+  compact,
   onClick,
 }: {
   link: LinkIncludingShortenedCollectionAndTags;
   className?: string;
   hideBackground?: boolean;
+  /** Smaller footprint for list rows */
+  compact?: boolean;
   onClick?: Function;
 }) {
+  const iconSize = compact ? 22 : 30;
+  const imgSize = compact ? 48 : 64;
+
   let iconClasses: string = clsx(
-    "rounded flex item-center justify-center shadow select-none z-10 w-12 h-12",
+    "rounded flex item-center justify-center shadow select-none z-10",
+    compact ? "w-9 h-9" : "w-12 h-12",
     !hideBackground &&
       "rounded-md backdrop-blur-xl bg-white/30 dark:bg-black/30 bg-opacity-50 p-1",
     className
@@ -47,7 +54,7 @@ function LinkIcon({
         <div className={iconClasses}>
           <Icon
             icon={link.icon}
-            size={30}
+            size={iconSize}
             weight={(link.iconWeight || "regular") as IconWeight}
             color={link.color || oklchVariableToHex("--p")}
             className="m-auto"
@@ -57,8 +64,8 @@ function LinkIcon({
         <>
           <Image
             src={`/api/v1/getFavicon?url=${encodeURIComponent(url.origin)}`}
-            width={64}
-            height={64}
+            width={imgSize}
+            height={imgSize}
             alt=""
             unoptimized
             className={clsx(
@@ -72,6 +79,7 @@ function LinkIcon({
             <LinkPlaceholderIcon
               iconClasses={iconClasses}
               icon="bi-link-45deg"
+              compact={compact}
             />
           )}
         </>
@@ -79,11 +87,13 @@ function LinkIcon({
         <LinkPlaceholderIcon
           iconClasses={iconClasses}
           icon="bi-file-earmark-pdf"
+          compact={compact}
         />
       ) : link.type === "image" ? (
         <LinkPlaceholderIcon
           iconClasses={iconClasses}
           icon="bi-file-earmark-image"
+          compact={compact}
         />
       ) : // : link.type === "monolith" ? (
       //   <LinkPlaceholderIcon
@@ -100,15 +110,18 @@ function LinkIcon({
 const LinkPlaceholderIcon = ({
   iconClasses,
   icon,
+  compact,
 }: {
   iconClasses: string;
   icon: string;
+  compact?: boolean;
 }) => {
   return (
     <div
       className={clsx(
         iconClasses,
-        "aspect-square text-4xl text-[oklch(var(--p))]"
+        "aspect-square text-[oklch(var(--p))]",
+        compact ? "text-2xl" : "text-4xl"
       )}
     >
       <i className={`${icon} m-auto`}></i>

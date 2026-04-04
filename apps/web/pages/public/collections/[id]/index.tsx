@@ -94,7 +94,7 @@ export default function PublicCollections() {
     useState(false);
 
   const [viewMode, setViewMode] = useState<ViewMode>(
-    (localStorage.getItem("viewMode") as ViewMode) || ViewMode.Card
+    (localStorage.getItem("viewMode") as ViewMode) || ViewMode.List
   );
 
   if (!collection) return <></>;

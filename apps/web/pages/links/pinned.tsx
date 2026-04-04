@@ -13,7 +13,7 @@ const Page: NextPageWithLayout = () => {
   const { t } = useTranslation();
 
   const [viewMode, setViewMode] = useState<ViewMode>(
-    (localStorage.getItem("viewMode") as ViewMode) || ViewMode.Card
+    (localStorage.getItem("viewMode") as ViewMode) || ViewMode.List
   );
   const [sortBy, setSortBy] = useState<Sort>(
     Number(localStorage.getItem("sortBy")) ?? Sort.DateNewestFirst
