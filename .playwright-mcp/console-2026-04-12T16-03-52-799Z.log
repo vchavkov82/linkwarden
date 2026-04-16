@@ -1,0 +1,6 @@
+[    1132ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(pages-dir-browser)/../../node_modules/react-dom/cjs/react-dom-client.development.js:24868
+[    1315ms] [LOG] [HMR] connected @ webpack-internal:///(pages-dir-browser)/../../node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:41
+[    1588ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://links.svc.assistance.bg/login:0
+[  354160ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(pages-dir-browser)/../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:195
+[  380236ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(pages-dir-browser)/../../node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:195
+[  380759ms] [LOG] [Fast Refresh] done in 524ms @ webpack-internal:///(pages-dir-browser)/../../node_modules/next/dist/client/components/react-dev-overlay/utils/report-hmr-latency.js:13

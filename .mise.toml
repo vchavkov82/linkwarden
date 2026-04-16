@@ -1,0 +1,61 @@
+[tools]
+node = "22"
+
+[tasks.dev]
+description = "Start web + worker + extension watch concurrently"
+run = "yarn concurrently:dev"
+
+[tasks."dev:web"]
+description = "Start web only (port 3000)"
+run = "yarn exec dotenv -- yarn workspace @linkwarden/web dev"
+
+[tasks."dev:worker"]
+description = "Start worker only"
+run = "yarn exec dotenv -- yarn workspace @linkwarden/worker dev"
+
+[tasks."dev:extension"]
+description = "Watch-build browser extension into dist/"
+run = "yarn extension:dev"
+
+[tasks."build"]
+description = "Build all (web + extension)"
+run = "yarn exec dotenv -- yarn workspace @linkwarden/web build && yarn workspace linkwarden-extension build"
+
+[tasks."build:web"]
+description = "Build web app for production"
+run = "yarn exec dotenv -- yarn workspace @linkwarden/web build"
+
+[tasks."build:extension"]
+description = "Build browser extension into dist/"
+run = "yarn workspace linkwarden-extension build"
+
+[tasks."install"]
+description = "Install all dependencies"
+run = "yarn install"
+
+[tasks."prisma:generate"]
+description = "Regenerate Prisma client after schema changes"
+run = "yarn prisma:generate"
+
+[tasks."prisma:dev"]
+description = "Create migration from schema changes"
+run = "yarn exec dotenv -- yarn prisma:dev"
+
+[tasks."prisma:deploy"]
+description = "Apply pending migrations"
+run = "yarn exec dotenv -- yarn prisma:deploy"
+
+[tasks."prisma:studio"]
+description = "Open Prisma Studio GUI"
+run = "yarn exec dotenv -- yarn prisma:studio"
+
+[tasks."lint"]
+description = "Lint web and extension"
+run = """
+cd apps/web && yarn lint
+yarn workspace linkwarden-extension lint
+"""
+
+[tasks."format"]
+description = "Format all workspaces"
+run = "yarn format"

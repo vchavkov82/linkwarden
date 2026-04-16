@@ -1,0 +1,76 @@
+import Navbar from "@/components/Navbar";
+import Announcement from "@/components/Announcement";
+import Sidebar from "@/components/Sidebar";
+import { ReactNode, useEffect, useState } from "react";
+import getLatestVersion from "@/lib/client/getLatestVersion";
+import DragNDrop from "@/components/DragNDrop";
+import { LinkIncludingShortenedCollectionAndTags } from "@linkwarden/types/global";
+
+interface Props {
+  children: ReactNode;
+}
+
+export default function MainLayout({ children }: Props) {
+  const [showAnnouncement, setShowAnnouncement] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("showAnnouncementBar");
+    return stored ? stored === "true" : true;
+  });
+  const [sidebarIsCollapsed, setSidebarIsCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const stored = localStorage.getItem("sidebarIsCollapsed");
+    return stored ? stored === "true" : false;
+  });
+
+  useEffect(() => {
+    getLatestVersion(setShowAnnouncement);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "showAnnouncementBar",
+      showAnnouncement ? "true" : "false"
+    );
+  }, [showAnnouncement]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "sidebarIsCollapsed",
+      sidebarIsCollapsed ? "true" : "false"
+    );
+  }, [sidebarIsCollapsed]);
+
+  const toggleAnnouncementBar = () => setShowAnnouncement(!showAnnouncement);
+  const toggleSidebar = () => setSidebarIsCollapsed(!sidebarIsCollapsed);
+
+  const [activeLink, setActiveLink] =
+    useState<LinkIncludingShortenedCollectionAndTags | null>(null);
+
+  return (
+    <DragNDrop activeLink={activeLink} setActiveLink={setActiveLink}>
+      <div className="flex" data-testid="dashboard-wrapper">
+        {showAnnouncement && (
+          <Announcement toggleAnnouncementBar={toggleAnnouncementBar} />
+        )}
+        <div className="hidden lg:block">
+          <Sidebar
+            className={`${sidebarIsCollapsed ? "w-14" : "w-80"}`}
+            toggleSidebar={toggleSidebar}
+            sidebarIsCollapsed={sidebarIsCollapsed}
+          />
+        </div>
+
+        <div
+          className={`${
+            sidebarIsCollapsed
+              ? "lg:w-[calc(100%-56px)]"
+              : "lg:w-[calc(100%-320px)]"
+          } w-full sm:pb-0 pb-20 flex flex-col h-screen overflow-y-auto`}
+        >
+          <Navbar />
+          {children}
+        </div>
+      </div>
+    </DragNDrop>
+  );
+}

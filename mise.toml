@@ -1,0 +1,385 @@
+[tools]
+node = "20"
+
+[hooks]
+postinstall = "corepack enable"
+
+# Override for your registry host/port (compose uses this path for the app image).
+# LINKWARDEN_PUBLIC_NPM_BUILD=1 — podman image build uses registry.npmjs.org (see Dockerfile).
+[env]
+REGISTRY = "docker.svc.assistance.bg:6000"
+IMAGE_PREFIX = "docker.svc.assistance.bg:6000/assistance/linkwarden"
+LINKWARDEN_PUBLIC_NPM_BUILD = "1"
+
+[tasks.restart]
+description = "Restart all podman-compose services"
+run = "podman-compose down && podman-compose up -d"
+
+[tasks.up]
+description = "Start services (if not running)"
+run = "podman-compose up -d"
+
+[tasks.down]
+description = "Stop all services"
+run = "podman-compose down"
+
+[tasks.logs]
+description = "Follow logs for all services"
+run = "podman-compose logs -f"
+
+[tasks.reboot]
+description = "Reboot the server"
+run = "sudo reboot"
+
+[tasks."build:debug"]
+description = "Next.js production build with verbose --debug (routes, timings); uses .env via dotenv"
+run = "yarn web:build:debug"
+
+[tasks.build]
+description = "Build Podman image (tags :latest); honors LINKWARDEN_PUBLIC_NPM_BUILD like release-image"
+run = """
+set -euo pipefail
+BUILD_ARGS=()
+if [ "${LINKWARDEN_PUBLIC_NPM_BUILD:-}" = "1" ]; then
+  BUILD_ARGS+=(--build-arg "LINKWARDEN_PUBLIC_NPM_BUILD=1")
+fi
+podman build --format docker "${BUILD_ARGS[@]}" -f Dockerfile -t "${IMAGE_PREFIX}:latest" .
+"""
+
+[tasks."build:ext"]
+description = "Build browser extension for production (outputs to dist/)"
+run = "yarn extension:build"
+
+[tasks.push]
+description = "Push :latest to registry"
+run = "podman push \"${IMAGE_PREFIX}:latest\""
+
+[tasks."build:push"]
+description = "Build and push :latest"
+depends = ["build", "push"]
+
+[tasks.verify]
+description = "Lint + unit tests (no E2E)"
+depends = ["lint", "test"]
+
+[tasks."release-image"]
+description = "Build image, tag :latest + v* from package.json, push both (SKIP_IMAGE_PUSH=1 skips push; needs jq + podman)"
+run = """
+set -euo pipefail
+command -v jq >/dev/null 2>&1 || { echo "release-image requires jq (e.g. apt install jq)"; exit 1; }
+command -v podman >/dev/null 2>&1 || { echo "release-image requires podman"; exit 1; }
+VERSION="v$(jq -r .version package.json)"
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$ROOT"
+echo "=== Podman release ${IMAGE_PREFIX} (${VERSION}) ==="
+BUILD_ARGS=()
+if [ "${LINKWARDEN_PUBLIC_NPM_BUILD:-}" = "1" ]; then
+  BUILD_ARGS+=(--build-arg "LINKWARDEN_PUBLIC_NPM_BUILD=1")
+  echo "LINKWARDEN_PUBLIC_NPM_BUILD=1 (using public npm for Yarn in image build)"
+fi
+podman build --format docker "${BUILD_ARGS[@]}" -f Dockerfile -t "${IMAGE_PREFIX}:latest" -t "${IMAGE_PREFIX}:${VERSION}" .
+if [ "${SKIP_IMAGE_PUSH:-}" = "1" ]; then
+  echo "SKIP_IMAGE_PUSH=1 — skipping podman push (image built locally with both tags)."
+  exit 0
+fi
+podman push "${IMAGE_PREFIX}:latest"
+podman push "${IMAGE_PREFIX}:${VERSION}"
+echo "Pushed ${IMAGE_PREFIX}:latest and ${IMAGE_PREFIX}:${VERSION}"
+"""
+
+[tasks.release]
+description = "Verify, then release-image; requires clean git tree unless RELEASE_ALLOW_DIRTY=1"
+depends = ["verify"]
+run = """
+set -euo pipefail
+if [ "${RELEASE_ALLOW_DIRTY:-}" != "1" ]; then
+  [ -z "$(git status --porcelain)" ] || { echo "ERROR: Working tree not clean (commit/stash or set RELEASE_ALLOW_DIRTY=1)"; exit 1; }
+fi
+mise run release-image
+"""
+
+[tasks."release:quick"]
+description = "Same as release-image (lint/tests/git clean not run). See release-image for SKIP_IMAGE_PUSH, LINKWARDEN_PUBLIC_NPM_BUILD"
+run = "mise run release-image"
+
+[tasks.install]
+description = "Install dependencies and Playwright browsers"
+run = """
+yarn install
+cd apps/web && npx playwright install chromium
+"""
+
+[tasks."db:migrate"]
+description = "Apply pending Prisma migrations (runs inside container)"
+run = "podman exec linkwarden_linkwarden_1 sh -c 'yarn prisma:deploy'"
+
+[tasks."db:generate"]
+description = "Regenerate Prisma client"
+run = "yarn prisma:generate"
+
+[tasks."db:studio"]
+description = "Open Prisma Studio (runs inside container)"
+run = "podman exec -it linkwarden_linkwarden_1 sh -c 'yarn prisma:studio'"
+
+[tasks."db:migrate:dev"]
+description = "Create and apply new migration from schema changes (runs inside container)"
+run = "podman exec -it linkwarden_linkwarden_1 sh -c 'yarn prisma:dev'"
+
+[tasks.kill]
+description = "Kill processes on dev ports (6010)"
+run = "ss -tlpn | grep ':6010 ' | grep -oP 'pid=\\K\\d+' | xargs -r kill -9 || true"
+
+[tasks."dev:start"]
+description = "Start dev dependencies (postgres + meilisearch)"
+run = """
+if podman container exists linkwarden_postgres_1 && podman container exists linkwarden_meilisearch_1; then
+  podman start linkwarden_postgres_1 linkwarden_meilisearch_1 >/dev/null 2>&1 || true
+else
+  podman-compose up -d postgres meilisearch
+fi
+"""
+
+[tasks."dev:stop"]
+description = "Stop dev dependencies"
+run = "podman-compose stop postgres meilisearch"
+
+[tasks."dev:kill"]
+description = "Kill dev dependencies and dev server"
+depends = ["kill"]
+run = "podman-compose down"
+
+[tasks.dev]
+description = "Start dependencies + web + worker + browser-extension in dev mode (ports 6010, 6011)"
+depends = ["dev:start"]
+run = """
+# Kill any processes on dev ports
+ss -tlpn 2>/dev/null | grep -E ':(6010|6011) ' | grep -oP 'pid=\\K\\d+' | xargs -r kill -9 2>/dev/null || true
+rm -rf apps/web/.next
+sleep 1
+
+# Build browser extension
+echo ""
+echo "Building browser extension..."
+yarn extension:build
+echo ""
+echo "Extension built. Install from:"
+echo "  apps/browser-extension/dist"
+echo ""
+echo "  Chrome/Brave/Edge: chrome://extensions → Developer mode → Load unpacked → select dist/"
+echo "  Firefox: about:debugging → This Firefox → Load Temporary Add-on → select dist/manifest.json"
+echo ""
+
+dotenv -f .env.dev run -- sh -c 'npx concurrently \
+  "yarn workspace @linkwarden/web dev" \
+  "yarn workspace @linkwarden/worker dev" \
+  "mise run dev:ext" \
+  --kill-others-on-exit'
+"""
+
+[tasks."dev:debug"]
+description = "Start dev with DEBUG_API: log every /api request + body/response on links & search"
+depends = ["dev:start"]
+run = """
+ss -tlpn 2>/dev/null | grep -E ':(6010|6011) ' | grep -oP 'pid=\\K\\d+' | xargs -r kill -9 2>/dev/null || true
+rm -rf apps/web/.next
+sleep 1
+
+dotenv -f .env.dev run -- sh -c 'DEBUG_API=true NEXT_PUBLIC_DEBUG_API=true npx concurrently \
+  "yarn workspace @linkwarden/web dev" \
+  "yarn workspace @linkwarden/worker dev" \
+  "mise run dev:ext" \
+  --kill-others-on-exit'
+"""
+
+[tasks."dev:debug:all"]
+description = "Start dev server with full DEBUG=* logging (very noisy)"
+depends = ["dev:start"]
+run = """
+ss -tlpn 2>/dev/null | grep -E ':(6010|6011) ' | grep -oP 'pid=\\K\\d+' | xargs -r kill -9 2>/dev/null || true
+rm -rf apps/web/.next
+sleep 1
+
+dotenv -f .env.dev run -- sh -c 'DEBUG_API=true NEXT_PUBLIC_DEBUG_API=true DEBUG=* npx concurrently \
+  "yarn workspace @linkwarden/web dev" \
+  "yarn workspace @linkwarden/worker dev" \
+  "mise run dev:ext" \
+  --kill-others-on-exit'
+"""
+
+[tasks."dev:ext"]
+description = "Build + serve browser extension in watch mode on port 6011 (landing page at /)"
+run = """
+systemctl --user stop linkwarden-extension 2>/dev/null || true
+ss -tlpn 2>/dev/null | grep -E ':(6011) ' | grep -oP 'pid=\\K\\d+' | xargs -r kill -9 2>/dev/null || true
+sleep 1
+# Initial build + sync dist into site/
+yarn extension:build
+cd apps/browser-extension
+mkdir -p site
+if [ ! -f site/index.html ]; then
+  printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title>Linkwarden Extension</title></head><body><h1>Linkwarden Extension</h1><p>Download <a href="./extension.zip">extension.zip</a> or open <a href="./dist/">dist/</a>.</p></body></html>' > site/index.html
+fi
+rm -rf site/dist && cp -r dist site/dist
+cd site && rm -f extension.zip && zip -rq extension.zip dist/ && cd ..
+# Watch: rebuild on change, sync to site/dist, serve site/
+npx concurrently \
+  "yarn extension:dev" \
+  "npx nodemon --watch dist --ext '*' --exec 'rm -rf site/dist && cp -r dist site/dist && cd site && rm -f extension.zip && zip -rq extension.zip dist/'" \
+  "python3 -m http.server 6011 --bind 0.0.0.0 --directory site" \
+  --kill-others-on-exit
+"""
+
+[tasks."ext:serve"]
+description = "Serve extension site on port 6011 (landing page + dist)"
+run = """
+yarn extension:build
+cd apps/browser-extension
+mkdir -p site
+if [ ! -f site/index.html ]; then
+  printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title>Linkwarden Extension</title></head><body><h1>Linkwarden Extension</h1><p>Download <a href="./extension.zip">extension.zip</a> or open <a href="./dist/">dist/</a>.</p></body></html>' > site/index.html
+fi
+rm -rf site/dist && cp -r dist site/dist
+cd site && rm -f extension.zip && zip -rq extension.zip dist/ && cd ..
+python3 -m http.server 6011 --bind 0.0.0.0 --directory site
+"""
+
+[tasks."ext:publish"]
+description = "Build extension and deploy to https://links.extension.svc.assistance.bg"
+run = """
+set -euo pipefail
+echo "Building extension..."
+yarn extension:build
+cd apps/browser-extension
+mkdir -p site
+if [ ! -f site/index.html ]; then
+  printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title>Linkwarden Extension</title></head><body><h1>Linkwarden Extension</h1><p>Download <a href="./extension.zip">extension.zip</a> or open <a href="./dist/">dist/</a>.</p></body></html>' > site/index.html
+fi
+rm -rf site/dist && cp -r dist site/dist
+cd site && rm -f extension.zip && zip -rq extension.zip dist/ && cd ..
+echo "Restarting extension server..."
+systemctl --user restart linkwarden-extension
+echo ""
+echo "Deployed to: https://links.extension.svc.assistance.bg"
+"""
+
+[tasks."api:test"]
+description = "Test API endpoints with curl"
+env = { API_URL = "http://localhost:6010" }
+run = """
+echo "Testing API health..."
+curl -s $API_URL/api/v1/config | jq .
+
+echo ""
+echo "Testing session endpoint (should fail without credentials)..."
+curl -s -X POST $API_URL/api/v1/session -H "Content-Type: application/json" -d '{"username":"test","password":"testpass123"}' | jq .
+"""
+
+[tasks."api:token"]
+description = "Test API with access token"
+run = """
+read -p "Enter your access token: " TOKEN
+read -p "Enter API URL (default: http://localhost:6010): " API_URL
+API_URL=${API_URL:-http://localhost:6010}
+
+echo ""
+echo "Testing /api/v1/users/me..."
+curl -s -H "Authorization: Bearer $TOKEN" $API_URL/api/v1/users/me | jq .
+
+echo ""
+echo "Testing /api/v1/links..."
+curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/api/v1/links?take=5" | jq .
+
+echo ""
+echo "Testing /api/v1/collections..."
+curl -s -H "Authorization: Bearer $TOKEN" $API_URL/api/v1/collections | jq .
+"""
+
+[tasks."api:debug"]
+description = "Run comprehensive API debug tests"
+run = "./scripts/debug-api.sh"
+
+[tasks."api:debug:auth"]
+description = "Run API debug tests with token (prompts for token)"
+run = """
+read -p "Enter your access token: " TOKEN
+./scripts/debug-api.sh "$TOKEN" "http://localhost:6010"
+"""
+
+[tasks."api:debug:prod"]
+description = "Run API debug tests against production"
+run = """
+read -p "Enter your access token: " TOKEN
+./scripts/debug-api.sh "$TOKEN" "https://links.svc.assistance.bg"
+"""
+
+[tasks.format]
+description = "Format all source files"
+run = "yarn format"
+
+[tasks.lint]
+description = "Lint web app"
+run = "cd apps/web && yarn lint"
+
+[tasks.test]
+description = "Run all tests (unit + integration)"
+run = "yarn test"
+
+[tasks."test:watch"]
+description = "Run tests in watch mode"
+run = "yarn test:watch"
+
+[tasks."test:coverage"]
+description = "Run tests with coverage report"
+run = "yarn test:coverage"
+
+[tasks."test:e2e"]
+description = "Run Playwright E2E tests"
+env = { TEST_USERNAME = "admin", TEST_PASSWORD = "adminpass" }
+run = "cd apps/web && npx playwright test"
+
+[tasks."test:e2e:ui"]
+description = "Run Playwright E2E tests with UI"
+env = { TEST_USERNAME = "admin", TEST_PASSWORD = "adminpass" }
+run = "cd apps/web && npx playwright test --ui"
+
+[tasks."test:e2e:headed"]
+description = "Run Playwright E2E tests in headed mode"
+env = { TEST_USERNAME = "admin", TEST_PASSWORD = "adminpass" }
+run = "cd apps/web && npx playwright test --headed"
+
+[tasks."test:all"]
+description = "Run all tests (unit + e2e)"
+depends = ["test"]
+run = "cd apps/web && npx playwright test"
+
+[tasks.clean]
+description = "Remove build artifacts, caches, and generated files"
+run = """
+echo "Cleaning build artifacts..."
+rm -rf apps/web/.next
+rm -rf apps/web/out
+rm -rf apps/worker/dist
+rm -rf .turbo
+rm -rf coverage
+rm -rf apps/web/test-results
+rm -rf apps/web/playwright-report
+rm -rf apps/web/blob-report
+echo "Cleaning caches..."
+rm -rf node_modules/.cache
+rm -rf apps/web/node_modules/.cache
+rm -rf .yarn/cache
+echo "Done!"
+"""
+
+[tasks."clean:all"]
+description = "Deep clean: artifacts + node_modules (requires yarn install after)"
+run = """
+mise run clean
+echo "Removing node_modules..."
+rm -rf node_modules
+rm -rf apps/web/node_modules
+rm -rf apps/worker/node_modules
+rm -rf apps/mobile/node_modules
+rm -rf packages/*/node_modules
+echo "Done! Run 'yarn install' to reinstall dependencies."
+"""

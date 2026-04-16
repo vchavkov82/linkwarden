@@ -1,0 +1,224 @@
+import { prisma } from "@linkwarden/prisma";
+import bcrypt from "bcrypt";
+import { removeFolder, removeFile } from "@linkwarden/filesystem";
+import { DeleteUserBody } from "@linkwarden/types/global";
+import updateSeats from "@/lib/api/stripe/updateSeats";
+import { meiliClient } from "@linkwarden/lib/meilisearchClient";
+import stripeSDK from "@/lib/api/stripe/stripeSDK";
+import transporter from "@linkwarden/lib/transporter";
+import { auditLog } from "@/lib/api/auditLog";
+
+export default async function deleteUserById(
+  userId: number,
+  body: DeleteUserBody,
+  isServerAdmin: boolean,
+  queryId: number
+) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      subscriptions: {
+        include: {
+          user: true,
+        },
+      },
+      parentSubscription: {
+        include: {
+          user: true,
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    return {
+      response: "Invalid credentials.",
+      status: 404,
+    };
+  }
+
+  if (!isServerAdmin) {
+    if (queryId === userId) {
+      if (user.password) {
+        const isPasswordValid = bcrypt.compareSync(
+          body.password,
+          user.password
+        );
+
+        if (!isPasswordValid && !isServerAdmin) {
+          return {
+            response: "Invalid credentials.",
+            status: 401,
+          };
+        }
+      } else {
+        return {
+          response:
+            "User has no password. Please reset your password from the forgot password page.",
+          status: 401,
+        };
+      }
+    } else {
+      if (user.parentSubscriptionId) {
+        return {
+          response: "Permission denied.",
+          status: 401,
+        };
+      } else {
+        if (!user.subscriptions) {
+          return {
+            response: "User has no subscription.",
+            status: 401,
+          };
+        }
+
+        const findChild = await prisma.user.findFirst({
+          where: { id: queryId, parentSubscriptionId: user.subscriptions?.id },
+        });
+
+        if (!findChild)
+          return {
+            response: "Permission denied.",
+            status: 401,
+          };
+
+        const removeUser = await prisma.user.update({
+          where: { id: findChild.id },
+          data: {
+            parentSubscription: {
+              disconnect: true,
+            },
+          },
+        });
+
+        if (removeUser.emailVerified)
+          await updateSeats(
+            user.subscriptions.stripeSubscriptionId,
+            user.subscriptions.quantity - 1
+          );
+
+        return {
+          response: "Account removed from subscription.",
+          status: 200,
+        };
+      }
+    }
+  }
+
+  // Delete the user and all related data within a transaction
+  try {
+    await prisma.$transaction(
+      async (prisma) => {
+        const links = await prisma.link.findMany({
+          where: { collection: { ownerId: queryId } },
+          select: { id: true },
+        });
+
+        const linkIds = links.map((link) => link.id);
+
+        await meiliClient?.index("links").deleteDocuments(linkIds);
+
+        const collections = await prisma.collection.findMany({
+          where: { ownerId: queryId },
+        });
+
+        await Promise.all(
+          collections.map(async (collection) => {
+            await removeFolder({ filePath: `archives/${collection.id}` });
+            await removeFolder({
+              filePath: `archives/preview/${collection.id}`,
+            });
+          })
+        );
+
+        await removeFile({ filePath: `uploads/avatar/${queryId}.jpg` });
+
+        if (process.env.STRIPE_SECRET_KEY) {
+          const stripe = stripeSDK();
+
+          // Send an email about cancellation reason if provided
+          if (
+            body.cancellation_details?.comment ||
+            body.cancellation_details?.feedback ||
+            user.acceptPromotionalEmails
+          )
+            await transporter.sendMail({
+              from: process.env.EMAIL_FROM,
+              to: "hello@linkwarden.app",
+              subject: "Links User Cancellation",
+              text: `User: ${user.email}\nFeedback: ${
+                body.cancellation_details?.feedback || "N/A"
+              }\nComment: ${
+                body.cancellation_details?.comment || "N/A"
+              }\nPromotional Emails: ${String(user.acceptPromotionalEmails)}`,
+            });
+
+          try {
+            if (user.subscriptions?.id && queryId !== userId) {
+              const subscription = await prisma.subscription.findFirst({
+                where: { userId: queryId },
+                select: { stripeSubscriptionId: true },
+              });
+
+              if (subscription) {
+                await stripe.subscriptions.cancel(
+                  subscription.stripeSubscriptionId,
+                  {
+                    cancellation_details: {
+                      comment: body.cancellation_details?.comment,
+                      feedback: body.cancellation_details?.feedback,
+                    },
+                  }
+                );
+              }
+            } else if (user.subscriptions?.id && queryId === userId) {
+              await stripe.subscriptions.cancel(
+                user.subscriptions.stripeSubscriptionId,
+                {
+                  cancellation_details: {
+                    comment: body.cancellation_details?.comment,
+                    feedback: body.cancellation_details?.feedback,
+                  },
+                }
+              );
+            } else if (
+              user.parentSubscription?.id &&
+              user &&
+              user.emailVerified
+            ) {
+              await updateSeats(
+                user.parentSubscription.stripeSubscriptionId,
+                user.parentSubscription.quantity - 1
+              );
+            }
+          } catch (err) {
+            console.error("Stripe cancellation failed during user deletion:", err);
+          }
+        }
+
+        // Finally, delete the user
+        await prisma.user.delete({
+          where: { id: queryId },
+        });
+      },
+      { timeout: 20000 }
+    );
+  } catch (err) {
+    console.error("User deletion transaction failed:", err);
+    return {
+      response: "Failed to delete user account. Please try again.",
+      status: 500,
+    };
+  }
+
+  auditLog({
+    event: "user.deleted",
+    userId: queryId,
+    detail: isServerAdmin ? "by admin" : "self-delete",
+  });
+
+  return {
+    response: "User account and all related data deleted successfully.",
+    status: 200,
+  };
+}

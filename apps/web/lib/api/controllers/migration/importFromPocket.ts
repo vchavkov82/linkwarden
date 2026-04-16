@@ -1,0 +1,128 @@
+import { prisma } from "@linkwarden/prisma";
+import { createFolder } from "@linkwarden/filesystem";
+import { hasPassedLimit, normalizeUrl } from "@linkwarden/lib";
+import Papa from "papaparse";
+
+type PocketBackup = {
+  title: string;
+  url: string;
+  time_added: string;
+  tags: string;
+  status: string;
+}[];
+
+export default async function importFromPocket(
+  userId: number,
+  rawData: string
+) {
+  const data = Papa.parse(rawData, {
+    header: true, // Treat first row as header
+    skipEmptyLines: true,
+  }).data as PocketBackup;
+
+  const backup = data.filter((e) => e.url);
+
+  let totalImports = backup.length;
+
+  const hasTooManyLinks = await hasPassedLimit(userId, totalImports);
+
+  if (hasTooManyLinks) {
+    return {
+      response: `Your subscription has reached the maximum number of links allowed.`,
+      status: 400,
+    };
+  }
+
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        const newCollection = await tx.collection.create({
+          data: {
+            owner: {
+              connect: {
+                id: userId,
+              },
+            },
+            name: "Imports",
+            createdBy: {
+              connect: {
+                id: userId,
+              },
+            },
+          },
+        });
+
+        createFolder({ filePath: `archives/${newCollection.id}` });
+
+        for (const link of backup) {
+          if (link.url) {
+            try {
+              new URL(link.url.trim());
+            } catch (err) {
+              continue;
+            }
+          }
+
+          const trimmedUrl = link.url?.slice(0, 2047).trim();
+          const normalized = normalizeUrl(trimmedUrl) || trimmedUrl;
+
+          const existing = await tx.link.findFirst({
+            where: { url: normalized, collectionId: newCollection.id },
+            select: { id: true },
+          });
+          if (existing) continue;
+
+          await tx.link.create({
+            data: {
+              url: normalized,
+              name: link.title?.slice(0, 254).trim() || "",
+              importDate: link.time_added
+                ? new Date(Number(link.time_added) * 1000).toISOString()
+                : null,
+              collection: {
+                connect: {
+                  id: newCollection.id,
+                },
+              },
+              owner: {
+                connect: {
+                  id: userId,
+                },
+              },
+              tags: {
+                connectOrCreate: link?.tags
+                  ? link.tags.split("|").map((tag) => ({
+                      where: {
+                        name_ownerId: {
+                          name: tag?.slice(0, 50).trim() || "",
+                          ownerId: userId,
+                        },
+                      },
+                      create: {
+                        name: tag?.slice(0, 50).trim() || "",
+                        ownerId: userId,
+                      },
+                    }))
+                  : [],
+              },
+              createdBy: {
+                connect: {
+                  id: userId,
+                },
+              },
+            },
+          });
+        }
+      },
+      { timeout: 30000 }
+    );
+  } catch (err) {
+    console.error("Pocket import failed:", err);
+    return {
+      response: "Import failed. Please check your file and try again.",
+      status: 500,
+    };
+  }
+
+  return { response: "Success.", status: 200 };
+}

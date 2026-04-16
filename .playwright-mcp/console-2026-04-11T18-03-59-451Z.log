@@ -1,0 +1,7 @@
+[     100ms] Error: This script should only be loaded in a browser extension.
+    at http://localhost:19227/assets/utils-YZASgBI2.js:1:20910
+    at http://localhost:19227/assets/utils-YZASgBI2.js:1:20747
+    at http://localhost:19227/assets/utils-YZASgBI2.js:1:20753
+    at Tr (http://localhost:19227/assets/utils-YZASgBI2.js:1:30305)
+    at http://localhost:19227/assets/utils-YZASgBI2.js:1:30329
+[     106ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:19227/favicon-32x32.png:0

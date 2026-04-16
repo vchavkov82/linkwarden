@@ -1,0 +1,48 @@
+{
+  "name": "linkwarden",
+  "packageManager": "yarn@4.12.0+sha512.f45ab632439a67f8bc759bf32ead036a1f413287b9042726b7cc4818b7b49e14e9423ba49b18f9e06ea4941c1ad062385b1d8760a8d5091a1a31e5f6219afca8",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "web:dev": "yarn exec dotenv -- yarn workspace @linkwarden/web dev",
+    "web:build": "yarn exec dotenv -- yarn workspace @linkwarden/web build",
+    "web:build:debug": "yarn exec dotenv -- yarn workspace @linkwarden/web build:debug",
+    "web:start": "yarn exec dotenv -- yarn workspace @linkwarden/web start",
+    "extension:dev": "yarn workspace linkwarden-extension dev",
+    "extension:build": "yarn workspace linkwarden-extension build",
+    "extension:lint": "yarn workspace linkwarden-extension lint",
+    "extension:preview": "yarn workspace linkwarden-extension preview",
+    "update:browserslist-db": "npx update-browserslist-db@latest",
+    "worker:dev": "yarn exec dotenv -- yarn workspace @linkwarden/worker dev",
+    "worker:start": "yarn exec dotenv -- yarn workspace @linkwarden/worker start",
+    "concurrently:dev": "concurrently \"yarn exec dotenv -- yarn workspace @linkwarden/web dev\" \"yarn exec dotenv -- yarn workspace @linkwarden/worker dev\" \"yarn extension:dev\"",
+    "concurrently:start": "concurrently \"yarn exec dotenv -- yarn workspace @linkwarden/web start\" \"yarn exec dotenv -- yarn workspace @linkwarden/worker start\"",
+    "prisma:deploy": "yarn exec dotenv -- yarn workspace @linkwarden/prisma deploy",
+    "prisma:dev": "yarn exec dotenv -- yarn workspace @linkwarden/prisma dev",
+    "prisma:generate": "yarn workspace @linkwarden/prisma generate",
+    "prisma:studio": "yarn workspace @linkwarden/prisma studio",
+    "format": "yarn workspaces run format",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "yarn workspace @linkwarden/web e2e",
+    "postinstall": "yarn workspace @linkwarden/web run postinstall && patch-package"
+  },
+  "resolutions": {
+    "@types/react": "18.3.1",
+    "@types/react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.1",
+    "dotenv-cli": "^8.0.0",
+    "vitest": "^4.1.1"
+  },
+  "dependencies": {
+    "concurrently": "^9.1.2",
+    "patch-package": "^8.0.0"
+  }
+}

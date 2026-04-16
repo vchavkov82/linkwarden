@@ -1,0 +1,71 @@
+- generic [ref=e2]:
+  - img "Linkwarden" [ref=e3]
+  - heading "Linkwarden Extension" [level=1] [ref=e4]
+  - paragraph [ref=e5]: v1.5.1
+  - paragraph [ref=e6]: Save, organize, and archive bookmarks directly from your browser. Works with any self-hosted Linkwarden instance.
+  - list [ref=e7]:
+    - listitem [ref=e8]: ✓Add links to Linkwarden with a single click
+    - listitem [ref=e9]: ✓Upload screenshots of the current page
+    - listitem [ref=e10]: ✓Save all open tabs at once
+    - listitem [ref=e11]: ✓Sign in with API key or credentials
+    - listitem [ref=e12]: ✓Keyboard shortcut for quick access
+  - generic [ref=e13]:
+    - link "Install for Chrome" [ref=e14] [cursor=pointer]:
+      - /url: https://chrome.google.com/webstore/detail/linkwarden/pnidmkljnhbjfffciajlcpeldoljnidn
+      - img [ref=e15]
+      - text: Install for Chrome
+    - link "Install for Firefox" [ref=e18] [cursor=pointer]:
+      - /url: https://addons.mozilla.org/en-US/firefox/addon/linkwarden
+      - img [ref=e19]
+      - text: Install for Firefox
+    - link "↓ Download unpacked (zip)" [ref=e22] [cursor=pointer]:
+      - /url: /extension.zip
+  - paragraph [ref=e24]:
+    - text: "Quick-save shortcut:"
+    - generic [ref=e25]: Ctrl
+    - text: +
+    - generic [ref=e26]: Shift
+    - text: +
+    - generic [ref=e27]: F
+    - text: "(Mac:"
+    - generic [ref=e28]: Cmd
+    - text: +
+    - generic [ref=e29]: Shift
+    - text: +
+    - generic [ref=e30]: "Y"
+    - text: )
+  - generic [ref=e31]:
+    - heading "Install from source" [level=3] [ref=e32]
+    - list [ref=e33]:
+      - listitem [ref=e34]:
+        - link "Download extension.zip" [ref=e35] [cursor=pointer]:
+          - /url: /extension.zip
+        - text: and unzip it
+      - listitem [ref=e36]:
+        - strong [ref=e37]: "Chrome:"
+        - text: Open
+        - code [ref=e38]: chrome://extensions
+        - text: ", enable Developer mode, click \"Load unpacked\", select the unzipped"
+        - code [ref=e39]: dist/
+        - text: folder
+      - listitem [ref=e40]:
+        - strong [ref=e41]: "Firefox:"
+        - text: Open
+        - code [ref=e42]: about:debugging#/runtime/this-firefox
+        - text: ", click \"Load Temporary Add-on\", select"
+        - code [ref=e43]: dist/manifest.json
+  - generic [ref=e44]:
+    - heading "Direct Downloads" [level=3] [ref=e45]
+    - list [ref=e46]:
+      - listitem [ref=e47]:
+        - link "extension.zip" [ref=e48] [cursor=pointer]:
+          - /url: /extension.zip
+        - text: Source-built unpacked extension bundle
+      - listitem [ref=e49]:
+        - link "manifest.json" [ref=e50] [cursor=pointer]:
+          - /url: /dist/manifest.json
+        - text: Use this for Firefox temporary install
+      - listitem [ref=e51]:
+        - link "dist/ directory" [ref=e52] [cursor=pointer]:
+          - /url: /dist/
+        - text: Browse the built extension files directly

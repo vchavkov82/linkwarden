@@ -1,0 +1,139 @@
+import { RssSubscription } from "@linkwarden/prisma/client";
+import { hasPassedLimit } from "./verifyCapacity";
+import Parser from "rss-parser";
+import { prisma } from "@linkwarden/prisma";
+import { withRetry } from "./withRetry";
+import { normalizeUrl } from "./normalizeUrl";
+
+type ParsedFeed = Awaited<ReturnType<Parser["parseURL"]>>;
+
+export const rssHandler = async (
+  rssSubscription: RssSubscription,
+  parserOrFeed: Parser | ParsedFeed
+) => {
+  try {
+    const feed =
+      "parseURL" in parserOrFeed
+        ? await parserOrFeed.parseURL(rssSubscription.url)
+        : parserOrFeed;
+
+    const feedLastPubDate =
+      feed.lastBuildDate ??
+      feed.items.reduce((acc: Date, item: ParsedFeed["items"][number]) => {
+        const itemPubDate = item.pubDate ? new Date(item.pubDate) : null;
+        return itemPubDate && itemPubDate > acc ? itemPubDate : acc;
+      }, new Date(0));
+
+    if (!feedLastPubDate)
+      throw new Error(
+        `No lastBuildDate or pubDate found in the following RSS feed: ${rssSubscription.url}`
+      );
+
+    if (
+      !rssSubscription.lastBuildDate ||
+      (rssSubscription.lastBuildDate &&
+        new Date(rssSubscription.lastBuildDate) < new Date(feedLastPubDate))
+    ) {
+      console.log(
+        "\x1b[34m%s\x1b[0m",
+        `Processing new RSS feed items for ${rssSubscription.name}`
+      );
+
+      const newItems = feed.items.filter(
+        (item: ParsedFeed["items"][number]) => {
+          const itemPubDate = item.pubDate ? new Date(item.pubDate) : null;
+          return itemPubDate && itemPubDate > rssSubscription.lastBuildDate!;
+        }
+      );
+
+      const hasTooManyLinks = await hasPassedLimit(
+        rssSubscription.ownerId,
+        newItems.length
+      );
+
+      if (hasTooManyLinks) {
+        console.log(
+          "\x1b[34m%s\x1b[0m",
+          `User ${rssSubscription.ownerId} has too many links. Skipping new RSS feed items.`
+        );
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: rssSubscription.ownerId },
+        select: { preventDuplicateLinks: true },
+      });
+
+      const checkDuplicates = user?.preventDuplicateLinks ?? false;
+
+      await withRetry(
+        async () => {
+          await prisma.$transaction(
+            async (tx) => {
+              for (const item of newItems) {
+                const normalized = normalizeUrl(item.link);
+
+                if (normalized) {
+                  const existing = await tx.link.findFirst({
+                    where: {
+                      url: normalized,
+                      collectionId: rssSubscription.collectionId,
+                    },
+                    select: { id: true },
+                  });
+
+                  if (existing && checkDuplicates) {
+                    console.log(
+                      "\x1b[33m%s\x1b[0m",
+                      `Skipping duplicate RSS item: ${item.link}`
+                    );
+                    continue;
+                  }
+
+                  if (existing) continue;
+                }
+
+                await tx.link.create({
+                  data: {
+                    name: item.title,
+                    url: normalized,
+                    type: "url",
+                    createdBy: {
+                      connect: {
+                        id: rssSubscription.ownerId,
+                      },
+                    },
+                    owner: {
+                      connect: {
+                        id: rssSubscription.ownerId,
+                      },
+                    },
+                    collection: {
+                      connect: {
+                        id: rssSubscription.collectionId,
+                      },
+                    },
+                  },
+                });
+              }
+
+              await tx.rssSubscription.update({
+                where: { id: rssSubscription.id },
+                data: { lastBuildDate: new Date(feedLastPubDate) },
+              });
+            },
+            { isolationLevel: "Serializable" }
+          );
+        },
+        5,
+        ["P2034"]
+      );
+    }
+  } catch (error) {
+    console.error(
+      "\x1b[34m%s\x1b[0m",
+      `Error processing RSS feed ${rssSubscription.url}:`,
+      error
+    );
+  }
+};
