@@ -57,7 +57,8 @@ meili_data
 prisma/dev.db
 .turbo
 
-service-account-file.jsonapps/browser-extension/
+service-account-file.json
 
 # local data volumes
 .data/
+.data/git-backups/
